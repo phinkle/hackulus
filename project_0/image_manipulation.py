@@ -41,4 +41,6 @@ def negate_image(img):
 
 
 def swap_red_and_green(img):
-    return cv2.merge([cv2.split(img)[1], cv2.split(img)[0], cv2.split(img)[2]])
+    dst = [img.copy()]
+    cv2.mixChannels([img], dst, numpy.array([1, 0, 0, 1, 2, 2]))
+    return dst[0]
