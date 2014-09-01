@@ -40,7 +40,7 @@ def negate_image(img):
     return numpy.asarray(out)
 
 
-def swap_red_and_green(img):
+def swap_blue_and_green(img):
     dst = [img.copy()]
     cv2.mixChannels([img], dst, numpy.array([1, 0, 0, 1, 2, 2]))
     return dst[0]
