@@ -9,3 +9,20 @@ unit tests pass.
 """
 
 # TODO: Implement!
+
+def flip_image(imageFile, horizontal, vertical):
+    if (horizontal and vertical):
+        return cv2.flip(imageFile, -1)
+    elif(horizontal):
+        return cv2.flip(imageFile, 0)
+    elif(vertical):
+        return cv2.flip(imageFIle, 1)
+    else:
+        return imageFile
+
+def negate_image(imageFile):
+    return cv2.subtract(np.full(nyc_image.shape, 255, dtype=np.uint8), imageFile)
+
+def swap_blue_and_green(imageFile):
+    b,g,r = cv2.split(imageFile)
+    return cv2.merge(g,b,r)
