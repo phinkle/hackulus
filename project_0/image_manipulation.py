@@ -34,11 +34,7 @@ def flip_image(img, horizontal, vertical):
 
 
 def negate_image(img):
-    out = []
-    for row in img:
-        out.append(cv2.absdiff(255, row))
-    return numpy.asarray(out)
-
+    return cv2.bitwise_not(img)
 
 def swap_blue_and_green(img):
     dst = [img.copy()]
