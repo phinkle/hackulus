@@ -9,6 +9,7 @@ TODO: Implement!
 
 import cv2
 import numpy
+from matplotlib import pyplot as plt
 
 
 def homography(image_a, image_b):
@@ -21,7 +22,18 @@ def homography(image_a, image_b):
     Returns: the 3x3 perspective transformation matrix (aka homography)
              mapping points in image_b to corresponding points in image_a.
     """
-    pass
+
+    sift = cv2.SIFT()
+    kp_a, des_a = sift.detectAndCompute(image_a, None)
+    kp_b, des_b = sift.detectAndCompute(image_b, None)
+
+    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
+    matches = bf.match(des_a, des_b)
+    matches = sorted(matches, key = lambda x: x.distance)
+
+    img3 = cv2.drawMatches(img1,kp1,img2,kp2,matches[:10], flags=2)
+    plt.imshow(img3)
+    plt.show()
 
 
 def warp_image(image, homography):
