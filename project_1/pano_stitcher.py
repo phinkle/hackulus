@@ -26,17 +26,17 @@ def homography(image_a, image_b):
     kp_a, des_a = sift.detectAndCompute(image_a, None)
     kp_b, des_b = sift.detectAndCompute(image_b, None)
 
-    #out_img_a = cv2.drawKeypoints(image_a, kp_a)
-    #out_img_b = cv2.drawKeypoints(image_b, kp_b)
+    # out_img_a = cv2.drawKeypoints(image_a, kp_a)
+    # out_img_b = cv2.drawKeypoints(image_b, kp_b)
 
-    #cv2.imshow("img_a_kp", out_img_a)
-    #cv2.imshow("img_b_kp", out_img_b)
-    #cv2.waitKey(0)
+    # cv2.imshow("img_a_kp", out_img_a)
+    # cv2.imshow("img_b_kp", out_img_b)
+    # cv2.waitKey(0)
 
     # FLANN parameters
     FLANN_INDEX_KDTREE = 0
     index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=100)   # or pass empty dictionary
+    search_params = dict(checks=100)
 
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
@@ -56,10 +56,10 @@ def homography(image_a, image_b):
     src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
     M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-        # print M
-        # print M.shape
+    # print M
+    # print M.shape
 
-    #print len(good)
+    # print len(good)
 
     return M
 
