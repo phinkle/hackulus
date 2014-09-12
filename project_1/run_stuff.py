@@ -1,15 +1,3 @@
-"""Unit tests for the pano_stitcher module.
-
-Implement your pano_stitcher module so that all tests pass.
-An example of how to run these tests is given in run_tests.sh.
-
-The tests below will be used to test the correctness of your
-implementation.
-
-You should  add additional detailed tests as you add more
-of your own functions to your implementation!
-"""
-
 import cv2
 import pano_stitcher
 import numpy
