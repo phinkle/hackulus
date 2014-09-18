@@ -36,7 +36,7 @@ def homography(image_a, image_b):
     # FLANN parameters
     FLANN_INDEX_KDTREE = 0
     index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
-    search_params = dict(checks=100)   # or pass empty dictionary
+    search_params = dict(checks=50)   # or pass empty dictionary
 
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
@@ -53,15 +53,21 @@ def homography(image_a, image_b):
     # print len(good)
 
     if len(good) > 10:
-        src_pts = np.float32([kp_a[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+        src_pts = np.float32([kp_a[m.queryIdx].pt for m in good])
+        dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
         M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
+        print "{} / {} inlier/matched".format(np.sum(mask), len(mask))
+
         # print M
         # print M.shape
+    else:
+        print "Not enough matches"
+        exit()
 
     print len(good)
+    print M
 
     return M
 
