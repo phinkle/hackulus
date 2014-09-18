@@ -26,12 +26,12 @@ def homography(image_a, image_b):
     kp_a, des_a = sift.detectAndCompute(image_a, None)
     kp_b, des_b = sift.detectAndCompute(image_b, None)
 
-    # out_img_a = cv2.drawKeypoints(image_a, kp_a)
-    # out_img_b = cv2.drawKeypoints(image_b, kp_b)
+    #out_img_a = cv2.drawKeypoints(image_a, kp_a)
+    #out_img_b = cv2.drawKeypoints(image_b, kp_b)
 
-    # cv2.imshow("img_a_kp", out_img_a)
-    # cv2.imshow("img_b_kp", out_img_b)
-    # cv2.waitKey(0)
+    #cv2.imshow("img_a_kp", out_img_a)
+    #cv2.imshow("img_b_kp", out_img_b)
+    #cv2.waitKey(0)
 
     # FLANN parameters
     FLANN_INDEX_KDTREE = 0
@@ -40,6 +40,7 @@ def homography(image_a, image_b):
 
     flann = cv2.FlannBasedMatcher(index_params, search_params)
 
+    bf = cv2.BFMatcher()
     matches = flann.knnMatch(des_a, des_b, k=2)
 
     good = []
@@ -47,16 +48,17 @@ def homography(image_a, image_b):
     # print len(matches)
 
     for m, n in matches:
-        if m.distance < 0.75 * n.distance:
+        if m.distance < 0.7 * n.distance:
             good.append(m)
 
     # print len(good)
 
     if len(good) > 10:
-        src_pts = np.float32([kp_a[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
-        dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp_a[m.queryIdx].pt for m in good])
+        src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 3.0)
 
         # print M
         # print M.shape
