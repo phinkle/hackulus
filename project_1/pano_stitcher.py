@@ -8,8 +8,7 @@ TODO: Implement!
 """
 
 import cv2
-import numpy
-from matplotlib import pyplot as plt
+import numpy as np
 
 
 def homography(image_a, image_b):
@@ -27,13 +26,44 @@ def homography(image_a, image_b):
     kp_a, des_a = sift.detectAndCompute(image_a, None)
     kp_b, des_b = sift.detectAndCompute(image_b, None)
 
-    bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck = True)
-    matches = bf.match(des_a, des_b)
-    matches = sorted(matches, key = lambda x: x.distance)
+    # out_img_a = cv2.drawKeypoints(image_a, kp_a)
+    # out_img_b = cv2.drawKeypoints(image_b, kp_b)
 
-    img3 = cv2.drawMatches(img1,kp1,img2,kp2,matches[:10], flags=2)
-    plt.imshow(img3)
-    plt.show()
+    # cv2.imshow("img_a_kp", out_img_a)
+    # cv2.imshow("img_b_kp", out_img_b)
+    # cv2.waitKey(0)
+
+    # FLANN parameters
+    FLANN_INDEX_KDTREE = 0
+    index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
+    search_params = dict(checks=100)   # or pass empty dictionary
+
+    flann = cv2.FlannBasedMatcher(index_params, search_params)
+
+    matches = flann.knnMatch(des_a, des_b, k=2)
+
+    good = []
+
+    # print len(matches)
+
+    for m, n in matches:
+        if m.distance < 0.75 * n.distance:
+            good.append(m)
+
+    # print len(good)
+
+    if len(good) > 10:
+        src_pts = np.float32([kp_a[m.queryIdx].pt for m in good]).reshape(-1, 1, 2)
+        dst_pts = np.float32([kp_b[m.trainIdx].pt for m in good]).reshape(-1, 1, 2)
+
+        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
+
+        # print M
+        # print M.shape
+
+    print len(good)
+
+    return M
 
 
 def warp_image(image, homography):
