@@ -52,18 +52,14 @@ def homography(image_a, image_b):
             good.append(m)
 
     # print len(good)
+    dst_pts = np.float32([kp_a[m.queryIdx].pt for m in good])
+    src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
-    if len(good) > 10:
-        dst_pts = np.float32([kp_a[m.queryIdx].pt for m in good])
-        src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
-
-
-        M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 3.0)
-
+    M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
         # print M
         # print M.shape
 
-    print len(good)
+    #print len(good)
 
     return M
 
@@ -86,7 +82,7 @@ def warp_image(image, homography):
         corner in the target space of 'homography', which accounts for any
         offset translation component of the homography.
     """
-    pass
+    return cv2.warpPerspective(image, homography, image.shape[:2])
 
 
 def create_mosaic(images, origins):
