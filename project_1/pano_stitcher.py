@@ -26,13 +26,6 @@ def homography(image_a, image_b):
     kp_a, des_a = sift.detectAndCompute(image_a, None)
     kp_b, des_b = sift.detectAndCompute(image_b, None)
 
-    # out_img_a = cv2.drawKeypoints(image_a, kp_a)
-    # out_img_b = cv2.drawKeypoints(image_b, kp_b)
-
-    # cv2.imshow("img_a_kp", out_img_a)
-    # cv2.imshow("img_b_kp", out_img_b)
-    # cv2.waitKey(0)
-
     # FLANN parameters
     FLANN_INDEX_KDTREE = 0
     index_params = dict(algorithm=FLANN_INDEX_KDTREE, trees=5)
@@ -56,10 +49,6 @@ def homography(image_a, image_b):
     src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
     M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-    # print M
-    # print M.shape
-
-    # print len(good)
 
     return M
 
@@ -82,7 +71,12 @@ def warp_image(image, homography):
         corner in the target space of 'homography', which accounts for any
         offset translation component of the homography.
     """
-    return cv2.warpPerspective(image, homography, image.shape[:2])
+    warped = cv2.warpPerspective(image, homography, (image.shape[1], image.shape[0]))
+    warped = cv2.warpPerspective(image, homography, image.shape[:2])
+
+    print warped
+
+    return (warped, (0, 0))
 
 
 def create_mosaic(images, origins):
