@@ -89,4 +89,17 @@ def create_mosaic(images, origins):
              in the mosaic not covered by any input image should have their
              alpha channel set to zero.
     """
-    pass
+
+    print [i.shape for i in images]
+    print [o for o in origins]
+    # for image in images:
+    #     cv2.imshow(str(image.shape), image)
+
+    # cv2.waitKey(0)
+
+    pano_width = sum(image.shape[1] for image in images)
+    pano_height = max(image.shape[0] for image in images)
+    print pano_width
+    print pano_height
+
+    return np.concatenate(images, axis=1)
