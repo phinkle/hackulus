@@ -38,10 +38,8 @@ def homography(image_a, image_b):
 
     good = []
 
-    # print len(matches)
-
     for m, n in matches:
-        if m.distance < 0.7 * n.distance:
+        if m.distance < 0.75 * n.distance:
             good.append(m)
 
     # print len(good)
@@ -71,12 +69,12 @@ def warp_image(image, homography):
         corner in the target space of 'homography', which accounts for any
         offset translation component of the homography.
     """
-    warped = cv2.warpPerspective(image, homography, (image.shape[1], image.shape[0]))
-    warped = cv2.warpPerspective(image, homography, image.shape[:2])
+    new_size = (int(homography[1][1] * image.shape[1]),
+                int(homography[0][0] * image.shape[0]))
+    warped = cv2.warpPerspective(image, homography, new_size)
+    origin = (int(homography[0][2]), int(homography[1][2]))
 
-    print warped
-
-    return (warped, (0, 0))
+    return (warped, origin)
 
 
 def create_mosaic(images, origins):
