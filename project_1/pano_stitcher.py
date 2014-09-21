@@ -71,8 +71,13 @@ def warp_image(image, homography):
     """
     new_size = (int(homography[1][1] * image.shape[1]),
                 int(homography[0][0] * image.shape[0]))
-    warped = cv2.warpPerspective(image, homography, new_size)
+
+    image_t = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+
+    warped = cv2.warpPerspective(image_t, homography, new_size)
     origin = (int(homography[0][2]), int(homography[1][2]))
+
+    cv2.imwrite("warped.png", warped)
 
     return (warped, origin)
 
@@ -90,16 +95,26 @@ def create_mosaic(images, origins):
              alpha channel set to zero.
     """
 
-    print [i.shape for i in images]
-    print [o for o in origins]
-    # for image in images:
-    #     cv2.imshow(str(image.shape), image)
+    top_left = (min(x for x, y in origins), min(y for x, y in origins))
 
-    # cv2.waitKey(0)
+    new_origins = [(x-top_left[0], y-top_left[1]) for x, y in origins]
 
-    pano_width = sum(image.shape[1] for image in images)
-    pano_height = max(image.shape[0] for image in images)
-    print pano_width
-    print pano_height
+    pano_width = 0
+    pano_height = 0
 
-    return np.concatenate(images, axis=1)
+    for i in range(len(images)):
+        image = images[i]
+        x, y = new_origins[i]
+        pano_width = max(pano_width, image.shape[1]+x)
+        pano_height = max(pano_height, image.shape[0]+y)
+
+    panorama = np.zeros((pano_height, pano_width, 4), np.uint8)
+
+    for i in range(len(images)):
+        image = images[i]
+
+        for y in range(image.shape[0]):
+            for x in range(image.shape[1]):
+                panorama[y+new_origins[i][1], x+new_origins[i][0]] = image[y, x]
+
+    return panorama
