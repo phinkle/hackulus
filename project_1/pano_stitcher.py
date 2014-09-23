@@ -42,15 +42,10 @@ def homography(image_a, image_b):
         if m.distance < 0.75 * n.distance:
             good.append(m)
 
-    # print len(good)
     dst_pts = np.float32([kp_a[m.queryIdx].pt for m in good])
     src_pts = np.float32([kp_b[m.trainIdx].pt for m in good])
 
     M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
-
-    # cv2.imshow("a", image_a)
-    # cv2.imshow("b", image_b)
-    # cv2.waitKey(0)
 
     return M
 
@@ -74,18 +69,10 @@ def warp_image(image, homography):
         offset translation component of the homography.
     """
 
-    # TODO explicitly map the four corners via the homography
-    # and divide by scale factor to figure out dimensions of new image
-
     top_left = np.array([0, 0, 1])
     bottom_left = np.array([image.shape[0], 0, 1])
     top_right = np.array([0, image.shape[1], 1])
     bottom_right = np.array([image.shape[0], image.shape[1], 1])
-
-    print top_left
-    print bottom_left
-    print top_right
-    print bottom_right
 
     origin = (int(homography[0][2]), int(homography[1][2]))
 
@@ -102,13 +89,9 @@ def warp_image(image, homography):
     top_right = top_right_warped / top_right_warped[2]
     bottom_right = bottom_right_warped / bottom_right_warped[2]
 
-    print top_left, bottom_left, top_right, bottom_right
-
     new_width = max(top_left[1], bottom_left[1], top_right[1], bottom_right[1])
     new_height = max(top_left[0], bottom_left[0], top_right[0],
                      bottom_right[0])
-
-    print new_width, new_height
 
     new_size = (int(new_width), int(new_height))
 

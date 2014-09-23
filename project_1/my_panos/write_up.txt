@@ -1,0 +1,6 @@
+Project 1
+#########
+
+Rohan Ramchand, Conner Collins, Max Timkovich
+
+To run our panorama program run `./mosaic image1 image2 image3` from this directory. The image will be output as panorama.png.
