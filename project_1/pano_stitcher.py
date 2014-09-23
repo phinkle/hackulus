@@ -48,6 +48,10 @@ def homography(image_a, image_b):
 
     M, mask = cv2.findHomography(src_pts, dst_pts, cv2.RANSAC, 5.0)
 
+    # cv2.imshow("a", image_a)
+    # cv2.imshow("b", image_b)
+    # cv2.waitKey(0)
+
     return M
 
 
@@ -69,15 +73,16 @@ def warp_image(image, homography):
         corner in the target space of 'homography', which accounts for any
         offset translation component of the homography.
     """
+    origin = (int(homography[0][2]), int(homography[1][2]))
+
     new_size = (int(homography[1][1] * image.shape[1]),
                 int(homography[0][0] * image.shape[0]))
 
-    image_t = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    homography[0][2] = 0
+    homography[1][2] = 0
 
-    warped = cv2.warpPerspective(image_t, homography, new_size)
-    origin = (int(homography[0][2]), int(homography[1][2]))
-
-    cv2.imwrite("warped.png", warped)
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2BGRA)
+    warped = cv2.warpPerspective(image, homography, new_size)
 
     return (warped, origin)
 
@@ -94,6 +99,7 @@ def create_mosaic(images, origins):
              in the mosaic not covered by any input image should have their
              alpha channel set to zero.
     """
+
 
     top_left = (min(x for x, y in origins), min(y for x, y in origins))
 
@@ -115,6 +121,8 @@ def create_mosaic(images, origins):
 
         for y in range(image.shape[0]):
             for x in range(image.shape[1]):
-                panorama[y+new_origins[i][1], x+new_origins[i][0]] = image[y, x]
+                for n in range(len(image[y, x])):
+                    panorama[y + new_origins[i][1], x + new_origins[i][0]][n] = image[y, x][n]
+                    # panorama[y+new_origins[i][1], x+new_origins[i][0]] = image[y, x]
 
     return panorama
