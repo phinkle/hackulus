@@ -77,7 +77,7 @@ def warp_image(image, homography):
     # TODO explicitly map the four corners via the homography
     # and divide by scale factor to figure out dimensions of new image
 
-    top_left = np.array([0,0,1])
+    top_left = np.array([0, 0, 1])
     bottom_left = np.array([image.shape[0], 0, 1])
     top_right = np.array([0, image.shape[1], 1])
     bottom_right = np.array([image.shape[0], image.shape[1], 1])
@@ -89,39 +89,25 @@ def warp_image(image, homography):
 
     origin = (int(homography[0][2]), int(homography[1][2]))
 
-    new_size = (int(homography[1][1] * image.shape[1]),
-                int(homography[0][0] * image.shape[0]))
-
     homography[0][2] = 0
     homography[1][2] = 0
 
-    top_left_warped = np.dot(homography, top_left) 
-    bottom_left_warped = np.dot(homography, bottom_left) 
-    top_right_warped = np.dot(homography, top_right) 
-    bottom_right_warped = np.dot(homography, bottom_right) 
-    
-    print top_left_warped
-    print bottom_left_warped
-    print top_right_warped
-    print bottom_right_warped
+    top_left_warped = np.dot(homography, top_left)
+    bottom_left_warped = np.dot(homography, bottom_left)
+    top_right_warped = np.dot(homography, top_right)
+    bottom_right_warped = np.dot(homography, bottom_right)
 
-    top_left = np.array([top_left_warped[0]/top_left_warped[2],
-      top_left_warped[1]/top_left_warped[2]])
-    bottom_left = np.array([bottom_left_warped[0]/bottom_left_warped[2],
-      bottom_left_warped[1]/bottom_left_warped[2]])
-    top_right = np.array([top_right_warped[0]/top_right_warped[2],
-      top_right_warped[1]/top_right_warped[2]])
-    bottom_right = np.array([bottom_right_warped[0]/bottom_right_warped[2],
-      bottom_right_warped[1]/bottom_right_warped[2]])
-    
+    top_left = top_left_warped / top_left_warped[2]
+    bottom_left = bottom_left_warped / bottom_left_warped[2]
+    top_right = top_right_warped / top_right_warped[2]
+    bottom_right = bottom_right_warped / bottom_right_warped[2]
+
     print top_left, bottom_left, top_right, bottom_right
 
     new_width = max(top_left[1], bottom_left[1], top_right[1], bottom_right[1])
-    new_height = max(top_left[0], bottom_left[0], top_right[0],
-        bottom_right[0])
+    new_height = max(top_left[0], bottom_left[0], top_right[0], bottom_right[0])
 
     print new_width, new_height
-    print new_size
 
     new_size = (int(new_width), int(new_height))
 
@@ -143,7 +129,6 @@ def create_mosaic(images, origins):
              in the mosaic not covered by any input image should have their
              alpha channel set to zero.
     """
-
 
     top_left = (min(x for x, y in origins), min(y for x, y in origins))
 
