@@ -105,7 +105,8 @@ def warp_image(image, homography):
     print top_left, bottom_left, top_right, bottom_right
 
     new_width = max(top_left[1], bottom_left[1], top_right[1], bottom_right[1])
-    new_height = max(top_left[0], bottom_left[0], top_right[0], bottom_right[0])
+    new_height = max(top_left[0], bottom_left[0], top_right[0],
+                     bottom_right[0])
 
     print new_width, new_height
 
@@ -150,8 +151,9 @@ def create_mosaic(images, origins):
 
         for y in range(image.shape[0]):
             for x in range(image.shape[1]):
-                for n in range(len(image[y, x])):
-                    panorama[y + new_origins[i][1], x + new_origins[i][0]][n] = image[y, x][n]
-                    # panorama[y+new_origins[i][1], x+new_origins[i][0]] = image[y, x]
+                pano_y = y + new_origins[i][1]
+                pano_x = x + new_origins[i][0]
+
+                panorama[pano_y, pano_x] = image[y, x]
 
     return panorama

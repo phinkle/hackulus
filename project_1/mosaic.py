@@ -16,19 +16,20 @@ books_1_warped, origin = pano_stitcher.warp_image(books_1, homography)
 images.append(books_1_warped)
 origins.append(origin)
 
-images.append(books_2)
-origins.append((0, 0))
+# books_2 = cv2.cvtColor(books_2, cv2.COLOR_BGR2BGRA)
+# images.append(books_2)
+# origins.append((0, 0))
 
-homography = pano_stitcher.homography(books_2, books_3)
-print homography
-books_3_warped, origin = pano_stitcher.warp_image(books_3, homography)
-images.append(books_3_warped)
-origins.append(origin)
+# homography = pano_stitcher.homography(books_2, books_3)
+# print homography
+# books_3_warped, origin = pano_stitcher.warp_image(books_3, homography)
+# images.append(books_3_warped)
+# origins.append(origin)
 
-print origins
+# print origins
 
-panorama = pano_stitcher.create_mosaic(images, origins)
+# panorama = pano_stitcher.create_mosaic(images, origins)
 
-cv2.imwrite("pano.jpg", panorama)
-# cv2.imshow("panorama", panorama)
-# cv2.waitKey(0)
+# cv2.imwrite("pano.png", panorama)
+cv2.imshow("books_1_warped", books_1_warped)
+cv2.waitKey(0)
