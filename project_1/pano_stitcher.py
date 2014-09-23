@@ -73,6 +73,9 @@ def warp_image(image, homography):
         corner in the target space of 'homography', which accounts for any
         offset translation component of the homography.
     """
+
+    # TODO explicitly map the four corners via the homography
+    # and divide by scale factor to figure out dimensions of new image
     origin = (int(homography[0][2]), int(homography[1][2]))
 
     new_size = (int(homography[1][1] * image.shape[1]),
