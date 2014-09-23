@@ -19,7 +19,8 @@ origins.append(origin)
 images.append(books_2)
 origins.append((0, 0))
 
-homography = pano_stitcher.homography(books_3, books_2)
+homography = pano_stitcher.homography(books_2, books_3)
+print homography
 books_3_warped, origin = pano_stitcher.warp_image(books_3, homography)
 images.append(books_3_warped)
 origins.append(origin)
