@@ -194,5 +194,12 @@ class TestPanoStitcher(unittest.TestCase):
 
         cv2.imwrite("test_data/books_pano.png", pano)
 
+    def test_composite_image(self):
+        """Tests compositing a smaller image onto a larger image."""
+        books = cv2.imread("test_data/books_2.png")
+        boots = cv2.imread("test_data/torture/boots.png")
+        dst = pano_stitcher.composite_image(0, 0, books, boots)
+        cv2.imwrite("test_data/composite.png", dst)
+
 if __name__ == '__main__':
     unittest.main()
