@@ -29,5 +29,6 @@ print origins
 
 panorama = pano_stitcher.create_mosaic(images, origins)
 
+cv2.imwrite("pano.png", panorama)
 cv2.imshow("panorama", panorama)
 cv2.waitKey(0)
