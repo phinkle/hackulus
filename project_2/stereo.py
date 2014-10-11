@@ -102,4 +102,17 @@ def point_cloud(disparity_image, image_left, focal_length):
         pixels, with colors sampled from left_image. You may filter low-
         disparity pixels or noise pixels if you choose.
     """
-    pass
+    h, w = image_left.shape[:2]
+    f = 0.8*w                          # guess for focal length
+    Q = np.float32([[1, 0, 0, 0.5*w],
+                    [0,1, 0,  0.5*h], # turn points 180 deg around x-axis,
+                    [0, 0, focal_length, 0], # so that y-axis looks up
+                    [0, 0, 0, 1]])
+    points = cv2.reprojectImageTo3D(disparity_image, Q)
+    colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
+    mask = disparity_image > disparity_image.min()
+    out_points = points[mask]
+    out_colors = colors[mask]
+    out_fn = 'out.ply'
+    print out_points
+    return out_points
