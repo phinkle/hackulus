@@ -69,21 +69,22 @@ def disparity_map(image_left, image_right):
     """
 
     window_size = 3
-    min_disp = 0
+    min_disp = 16
     num_disp = 112-min_disp
     stereo = cv2.StereoSGBM(minDisparity=min_disp,
-        numDisparities=num_disp,
-        SADWindowSize=window_size,
-        uniquenessRatio=5,
-        speckleWindowSize=50,
-        speckleRange=160,
-        disp12MaxDiff=1,
-        P1=8*3*window_size**2,
-        P2=32*3*window_size**2,
-        fullDP=False
-    )
+                            numDisparities=num_disp,
+                            SADWindowSize=window_size,
+                            uniquenessRatio=10,
+                            speckleWindowSize=100,
+                            speckleRange=32,
+                            disp12MaxDiff=1,
+                            P1=8*3*(window_size**2),
+                            P2=32*3*(window_size**2),
+                            fullDP=False
+                           )
 
-    disp = stereo.compute(image_left, image_right).astype(np.uint8)
+    temp_disp = stereo.compute(image_left, image_right) / 16.0
+    disp = np.array(temp_disp, dtype="uint8")
 
     return disp
 
