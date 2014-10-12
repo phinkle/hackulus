@@ -38,7 +38,7 @@ def rectify_pair(image_left, image_right, viz=False):
     # store all the good matches as per Lowe's ratio test
     good = []
     for m, n in matches:
-        if m.distance < 0.7*n.distance:
+        if m.distance < 0.7 * n.distance:
             good.append(m)
 
     src_pts = np.float32([kp1[m.queryIdx].pt for m in good])
@@ -70,7 +70,7 @@ def disparity_map(image_left, image_right):
 
     window_size = 3
     min_disp = 16
-    num_disp = 112-min_disp
+    num_disp = 112 - min_disp
     stereo = cv2.StereoSGBM(minDisparity=min_disp,
                             numDisparities=num_disp,
                             SADWindowSize=window_size,
@@ -78,8 +78,8 @@ def disparity_map(image_left, image_right):
                             speckleWindowSize=100,
                             speckleRange=32,
                             disp12MaxDiff=1,
-                            P1=8*3*(window_size**2),
-                            P2=32*3*(window_size**2),
+                            P1=8 * 3 * (window_size ** 2),
+                            P2=32 * 3 * (window_size ** 2),
                             fullDP=False
                            )
 
@@ -103,11 +103,10 @@ def point_cloud(disparity_image, image_left, focal_length):
         disparity pixels or noise pixels if you choose.
     """
     h, w = image_left.shape[:2]
-    f = 0.8*w                          # guess for focal length
-    Q = np.float32([[1, 0, 0, 0.5*w],
-                    [0,1, 0,  0.5*h], # turn points 180 deg around x-axis,
-                    [0, 0, focal_length, 0], # so that y-axis looks up
-                    [0, 0, 0, 1]])
+    Q = np.float32([[1, 0,  0,  0.5 * w],
+                    [0, 1,  0,  0.5 * h],  # turn points 180 deg around x-axis,
+                    [0, 0, focal_length,  0],  # so that y-axis looks up
+                    [0, 0,  0,  1]])
     points = cv2.reprojectImageTo3D(disparity_image, Q)
     colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
     mask = disparity_image > disparity_image.min()
