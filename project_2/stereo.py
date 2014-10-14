@@ -39,7 +39,6 @@ def rectify_pair(image_left, image_right, viz=False):
     # store all the good matches as per Lowe's ratio test
     good = []
     for m, n in matches:
-        if m.distance < 0.7*n.distance:
         if m.distance < 0.7 * n.distance:
             good.append(m)
 
@@ -90,7 +89,6 @@ def disparity_map(image_left, image_right):
 
     return disp
 
-
 ply_header = '''ply
 format ascii 1.0
 element vertex %(vert_num)d
@@ -108,9 +106,10 @@ def write_ply(fn, verts, colors):
     verts = verts.reshape(-1, 3)
     colors = colors.reshape(-1, 3)
     verts = np.hstack([verts, colors])
-    with open(fn, 'w') as f:
-        f.write(ply_header % dict(vert_num=len(verts)))
-        np.savetxt(f, verts, '%f %f %f %d %d %d')
+    # with open(fn, 'w') as f:
+    fn.write(ply_header % dict(vert_num=len(verts)))
+    np.savetxt(fn, verts, '%f %f %f %d %d %d')
+    return fn
 
 
 def point_cloud(disparity_image, image_left, focal_length):
