@@ -6,6 +6,7 @@ In this project, you'll extract dense 3D information from stereo image pairs.
 import cv2
 import math
 import numpy as np
+import StringIO
 
 
 def rectify_pair(image_left, image_right, viz=False):
@@ -38,7 +39,7 @@ def rectify_pair(image_left, image_right, viz=False):
     # store all the good matches as per Lowe's ratio test
     good = []
     for m, n in matches:
-        if m.distance < 0.7*n.distance:
+        if m.distance < 0.7 * n.distance:
             good.append(m)
 
     src_pts = np.float32([kp1[m.queryIdx].pt for m in good])
@@ -70,7 +71,7 @@ def disparity_map(image_left, image_right):
 
     window_size = 3
     min_disp = 16
-    num_disp = 112-min_disp
+    num_disp = 112 - min_disp
     stereo = cv2.StereoSGBM(minDisparity=min_disp,
                             numDisparities=num_disp,
                             SADWindowSize=window_size,
@@ -78,15 +79,37 @@ def disparity_map(image_left, image_right):
                             speckleWindowSize=100,
                             speckleRange=32,
                             disp12MaxDiff=1,
-                            P1=8*3*(window_size**2),
-                            P2=32*3*(window_size**2),
+                            P1=8 * 3 * (window_size ** 2),
+                            P2=32 * 3 * (window_size ** 2),
                             fullDP=False
-                           )
+                            )
 
     temp_disp = stereo.compute(image_left, image_right) / 16.0
     disp = np.array(temp_disp, dtype="uint8")
 
     return disp
+
+ply_header = '''ply
+format ascii 1.0
+element vertex %(vert_num)d
+property float x
+property float y
+property float z
+property uchar red
+property uchar green
+property uchar blue
+end_header
+'''
+
+
+def write_ply(fn, verts, colors):
+    verts = verts.reshape(-1, 3)
+    colors = colors.reshape(-1, 3)
+    verts = np.hstack([verts, colors])
+    # with open(fn, 'w') as f:
+    fn.write(ply_header % dict(vert_num=len(verts)))
+    np.savetxt(fn, verts, '%f %f %f %d %d %d')
+    return fn
 
 
 def point_cloud(disparity_image, image_left, focal_length):
@@ -103,16 +126,18 @@ def point_cloud(disparity_image, image_left, focal_length):
         disparity pixels or noise pixels if you choose.
     """
     h, w = image_left.shape[:2]
-    f = 0.8*w                          # guess for focal length
-    Q = np.float32([[1, 0, 0, 0.5*w],
-                    [0,1, 0,  0.5*h], # turn points 180 deg around x-axis,
-                    [0, 0, focal_length, 0], # so that y-axis looks up
-                    [0, 0, 0, 1]])
+    Q = np.float32([[1, 0,  0, w / 2],
+                    [0, -1,  0,  h / 2],  # turn points 180 deg around x-axis,
+                    [0, 0, focal_length,  0],  # so that y-axis looks up
+                    [0, 0,  0,  1]])
     points = cv2.reprojectImageTo3D(disparity_image, Q)
     colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
     mask = disparity_image > disparity_image.min()
     out_points = points[mask]
     out_colors = colors[mask]
     out_fn = 'out.ply'
-    print out_points
-    return out_points
+    cloud = StringIO.StringIO()
+    # items = write_ply(out_fn, out_points, out_colors)
+    cloudStuff = write_ply(cloud, out_points, out_colors)
+    # print cloudStuff.getvalue()
+    return cloudStuff.getvalue()
