@@ -1,0 +1,71 @@
+stereo_old.py:73:19: E225 missing whitespace around operator
+    num_disp = 112-min_disp
+                  ^
+stereo_old.py:103:1: E302 expected 2 blank lines, found 1
+def write_ply(fn, vertices, colors):
+^
+stereo_old.py:126:1: W293 blank line contains whitespace
+
+^
+stereo_old.py:143:1: W391 blank line at end of file
+
+^
+stereo.py:108:23: E231 missing whitespace after ','
+                    [0,1, 0,  0.5*h], # turn points 180 deg around x-axis,
+                      ^
+stereo.py:108:38: E261 at least two spaces before inline comment
+                    [0,1, 0,  0.5*h], # turn points 180 deg around x-axis,
+                                     ^
+Some style errors detected.
+
+[[ 320.  240.  230.]
+ [ 321.  240.  230.]
+ [ 322.  240.  230.]
+ ..., 
+ [ 957.  719.  260.]
+ [ 958.  719.  260.]
+ [ 959.  719.  260.]]
+HLEFT
+[[ -9.78772080e-02   6.05618647e-02  -1.97670130e+01]
+ [ -5.49405453e-03  -1.15221020e-01   5.72277187e-01]
+ [  4.02549709e-05  -1.77417930e-06  -1.36605514e-01]]
+Expected fundamental matrix :
+[[  2.38958660e-07  -2.30078185e-05  -3.82577705e-03]
+ [ -4.57131715e-05  -2.03219010e-06   1.42189842e-01]
+ [ -5.01095221e-03  -1.09146504e-01   1.00000000e+00]]
+Actual fundamental matrix :
+[[ -4.09734628e-07  -2.85445889e-05  -3.08007444e-03]
+ [ -4.39418742e-05  -1.99488948e-06   1.48501692e-01]
+ [ -5.58530536e-03  -1.14462682e-01   1.00000000e+00]]
+Difference
+[[  6.48693288e-07   5.53677040e-06   7.45702607e-04]
+ [  1.77129730e-06   3.73006165e-08   6.31184981e-03]
+ [  5.74353145e-04   5.31617815e-03   0.00000000e+00]]
+Magnitude of difference: 0.00830585253607
+Expected left rectifying homography :
+[[ -9.78273713e-02   6.04430191e-02  -1.69179548e+01]
+ [ -4.78698812e-03  -1.09671985e-01   2.31661658e-01]
+ [  4.25159162e-05  -8.17208264e-07  -1.32607389e-01]]
+Actual left rectifying homography :
+[[ -9.78772080e-02   6.05618647e-02  -1.97670130e+01]
+ [ -5.49405453e-03  -1.15221020e-01   5.72277187e-01]
+ [  4.02549709e-05  -1.77417930e-06  -1.36605514e-01]]
+Difference
+[[  4.98366989e-05   1.18845649e-04   2.84905822e+00]
+ [  7.07066409e-04   5.54903484e-03   3.40615529e-01]
+ [  2.26094525e-06   9.56971033e-07   3.99812458e-03]]
+Magnitude of difference: 2.86935514682
+Expected right rectifying homography :
+[[  1.04725916e+00   1.32521331e-01  -7.95404897e+01]
+ [ -2.73716541e-02   1.00451089e+00   5.43598999e+00]
+ [  1.96336656e-04   2.48446573e-05   9.32407071e-01]]
+Actual right rectifying homography :
+[[  1.05502210e+00   1.45220662e-01  -8.80715407e+01]
+ [ -2.18365183e-02   1.00642317e+00   2.92447721e+00]
+ [  2.29049556e-04   3.15279920e-05   9.19873079e-01]]
+Difference
+[[  7.76293820e-03   1.26993312e-02   8.53105098e+00]
+ [  5.53513580e-03   1.91227887e-03   2.51151278e+00]
+ [  3.27129003e-05   6.68333466e-06   1.25339923e-02]]
+Magnitude of difference: 8.89308384093
+All unit tests passing. Congrats!

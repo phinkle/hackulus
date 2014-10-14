@@ -39,6 +39,7 @@ def rectify_pair(image_left, image_right, viz=False):
     good = []
     for m, n in matches:
         if m.distance < 0.7*n.distance:
+        if m.distance < 0.7 * n.distance:
             good.append(m)
 
     src_pts = np.float32([kp1[m.queryIdx].pt for m in good])
@@ -50,6 +51,9 @@ def rectify_pair(image_left, image_right, viz=False):
 
     retval, H_left, H_right = cv2.stereoRectifyUncalibrated(
         src_pts, dst_pts, F, image_left.shape[:2])
+
+    print("HLEFT")
+    print(H_left)
 
     return F, H_left, H_right
 
@@ -67,21 +71,21 @@ def disparity_map(image_left, image_right):
 
     window_size = 3
     min_disp = 16
-    num_disp = 112-min_disp
+    num_disp = 112 - min_disp
     stereo = cv2.StereoSGBM(minDisparity=min_disp,
-        numDisparities=num_disp,
-        SADWindowSize=window_size,
-        uniquenessRatio=10,
-        speckleWindowSize=100,
-        speckleRange=32,
-        disp12MaxDiff=1,
-        P1=8*3*window_size**2,
-        P2=32*3*window_size**2,
-        fullDP=False
-    )
+                            numDisparities=num_disp,
+                            SADWindowSize=window_size,
+                            uniquenessRatio=10,
+                            speckleWindowSize=100,
+                            speckleRange=32,
+                            disp12MaxDiff=1,
+                            P1=8 * 3 * (window_size ** 2),
+                            P2=32 * 3 * (window_size ** 2),
+                            fullDP=False
+                           )
 
-    disp = stereo.compute(image_left, image_right).astype(np.float32) / 16.0
-    disp = np.dtype(unit8)
+    temp_disp = stereo.compute(image_left, image_right) / 16.0
+    disp = np.array(temp_disp, dtype="uint8")
 
     return disp
 
@@ -99,4 +103,16 @@ def point_cloud(disparity_image, image_left, focal_length):
         pixels, with colors sampled from left_image. You may filter low-
         disparity pixels or noise pixels if you choose.
     """
-    pass
+    h, w = image_left.shape[:2]
+    Q = np.float32([[1, 0,  0,  0.5 * w],
+                    [0, 1,  0,  0.5 * h],  # turn points 180 deg around x-axis,
+                    [0, 0, focal_length,  0],  # so that y-axis looks up
+                    [0, 0,  0,  1]])
+    points = cv2.reprojectImageTo3D(disparity_image, Q)
+    colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
+    mask = disparity_image > disparity_image.min()
+    out_points = points[mask]
+    out_colors = colors[mask]
+    out_fn = 'out.ply'
+    print out_points
+    return out_points
