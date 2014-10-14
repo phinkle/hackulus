@@ -3,16 +3,16 @@ import numpy as np
 import StringIO
 import stereo as stereo
 
-image_left = cv2.imread('test_data/kitchen_left.jpg')
-image_right = cv2.imread('test_data/kitchen_right.jpg')
+image_left = cv2.imread('test_data/cones/im2.png')
+image_right = cv2.imread('test_data/cones/im6.png')
 
 # image_left = cv2.imread('img_left.jpg')
 # image_right = cv2.imread('img_right.jpg')
 # image_left = cv2.imread('test_data/tsukuba/left.png')
 # image_right = cv2.imread('test_data/tsukuba/right.png')
 
-r_image_left = cv2.imread('test_data/rectified_left.png')
-r_image_right = cv2.imread('test_data/rectified_right.png')
+#r_image_left = cv2.imread('test_data/rectified_left.png')
+#r_image_right = cv2.imread('test_data/rectified_right.png')
 
 focal_length = 5
 
@@ -31,8 +31,8 @@ right_shape = (r_width, r_height)
 # rectify_right, something2 = stereo.warp_image(image_right, h_right)
 rectify_right = cv2.warpPerspective(image_right, h_right, right_shape)
 
-disparity = stereo.disparity_map(rectify_left, rectify_right)
-#disparity = stereo.disparity_map(image_left, image_right)
+#disparity = stereo.disparity_map(rectify_left, rectify_right)
+disparity = stereo.disparity_map(image_left, image_right)
 
 ply_string = stereo.point_cloud(disparity, image_left, focal_length)
 
@@ -42,4 +42,3 @@ cv2.imwrite("disparity.jpg", disparity)
 
 with open("out.ply", 'w') as f:
     f.write(ply_string)
-
