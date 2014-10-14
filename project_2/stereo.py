@@ -6,6 +6,7 @@ In this project, you'll extract dense 3D information from stereo image pairs.
 import cv2
 import math
 import numpy as np
+import StringIO
 
 
 def rectify_pair(image_left, image_right, viz=False):
@@ -82,7 +83,7 @@ def disparity_map(image_left, image_right):
                             P1=8 * 3 * (window_size ** 2),
                             P2=32 * 3 * (window_size ** 2),
                             fullDP=False
-                           )
+                            )
 
     temp_disp = stereo.compute(image_left, image_right) / 16.0
     disp = np.array(temp_disp, dtype="uint8")
@@ -126,8 +127,8 @@ def point_cloud(disparity_image, image_left, focal_length):
         disparity pixels or noise pixels if you choose.
     """
     h, w = image_left.shape[:2]
-    Q = np.float32([[1, 0,  0,  0.5 * w],
-                    [0, 1,  0,  0.5 * h],  # turn points 180 deg around x-axis,
+    Q = np.float32([[1, 0,  0, w / 2],
+                    [0, -1,  0,  h / 2],  # turn points 180 deg around x-axis,
                     [0, 0, focal_length,  0],  # so that y-axis looks up
                     [0, 0,  0,  1]])
     points = cv2.reprojectImageTo3D(disparity_image, Q)
@@ -136,4 +137,8 @@ def point_cloud(disparity_image, image_left, focal_length):
     out_points = points[mask]
     out_colors = colors[mask]
     out_fn = 'out.ply'
-    write_ply('out.ply', out_points, out_colors)
+    cloud = StringIO.StringIO()
+    # items = write_ply(out_fn, out_points, out_colors)
+    cloudStuff = write_ply(cloud, out_points, out_colors)
+    # print cloudStuff.getvalue()
+    return cloudStuff.getvalue()
