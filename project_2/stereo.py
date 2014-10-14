@@ -77,6 +77,7 @@ def disparity_map(image_left, image_right):
                             speckleWindowSize=100,
                             speckleRange=32,
                             disp12MaxDiff=1,
+                            preFilterCap=20,
                             P1=8 * 3 * (window_size ** 2),
                             P2=32 * 3 * (window_size ** 2),
                             fullDP=False
