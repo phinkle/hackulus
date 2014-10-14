@@ -187,5 +187,5 @@ def point_cloud(disparity_image, image_left, focal_length):
     cloud = StringIO.StringIO()
     # items = write_ply(out_fn, out_points, out_colors)
     cloudStuff = write_ply(cloud, out_points, out_colors)
-    print cloudStuff.getvalue()
+    # print cloudStuff.getvalue()
     return cloudStuff.getvalue()
