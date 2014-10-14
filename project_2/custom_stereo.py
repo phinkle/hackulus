@@ -14,7 +14,7 @@ image_right = cv2.imread('test_data/kitchen_right.jpg')
 r_image_left = cv2.imread('test_data/rectified_left.png')
 r_image_right = cv2.imread('test_data/rectified_right.png')
 
-focal_length = 10
+focal_length = 5
 
 print(image_left.shape)
 print(image_right.shape)
@@ -31,14 +31,15 @@ right_shape = (r_width, r_height)
 # rectify_right, something2 = stereo.warp_image(image_right, h_right)
 rectify_right = cv2.warpPerspective(image_right, h_right, right_shape)
 
-#disparity = stereo.disparity_map(rectify_left, rectify_right)
-disparity = stereo.disparity_map(r_image_left, r_image_right)
+disparity = stereo.disparity_map(rectify_left, rectify_right)
+#disparity = stereo.disparity_map(image_left, image_right)
 
-ply_string = stereo.point_cloud(disparity, r_image_left, focal_length)
+ply_string = stereo.point_cloud(disparity, image_left, focal_length)
+
+cv2.imwrite("image_left.jpg", rectify_left)
+cv2.imwrite("image_right.jpg", rectify_right)
+cv2.imwrite("disparity.jpg", disparity)
 
 with open("out.ply", 'w') as f:
     f.write(ply_string)
 
-cv2.imwrite("image_left.jpg", r_image_left)
-cv2.imwrite("image_right.jpg", r_image_right)
-cv2.imwrite("disparity.jpg", disparity)

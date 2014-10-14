@@ -39,13 +39,14 @@ def rectify_pair(image_left, image_right, viz=False):
     # store all the good matches as per Lowe's ratio test
     good = []
     for m, n in matches:
-        if m.distance < 0.65 * n.distance:
+        if m.distance < 0.68 * n.distance:
             good.append(m)
 
     src_pts = np.float32([kp1[m.queryIdx].pt for m in good])
     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good])
 
-    F, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.LMEDS)
+    # F, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.LMEDS)
+    F, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.RANSAC, 3, 0.99)
     src_pts = src_pts.flatten()
     dst_pts = dst_pts.flatten()
 
@@ -132,9 +133,8 @@ def point_cloud(disparity_image, image_left, focal_length):
     mask = disparity_image > disparity_image.min()
     out_points = points[mask]
     out_colors = colors[mask]
-    out_fn = 'out.ply'
     cloud = StringIO.StringIO()
-    cloudStuff = write_ply(cloud, out_points, out_colors)
+    #cloudStuff = write_ply(cloud, out_points, out_colors)
     verts = np.hstack([out_points, out_colors])
     cloud.write(ply_header % dict(vert_num=len(verts)))
     np.savetxt(cloud, verts, '%f %f %f %d %d %d')
