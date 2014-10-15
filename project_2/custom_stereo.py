@@ -2,6 +2,15 @@ import cv2
 import numpy as np
 import StringIO
 import stereo as stereo
+import argparse
+
+parser = argparse.ArgumentParser(description='TEST DESCRIPTION')
+parser.add_argument('-l', '--left', help='Input left image', required=True)
+parser.add_argument('-r', '--right', help='Input right image', required=True)
+args = parser.parse_args()
+
+print ("Left image: %s" % args.left)
+print ("Right image: %s" % args.right)
 
 """Tikki Image"""
 # image_left = cv2.imread('test_data/cones/im2.png')
@@ -10,8 +19,8 @@ import stereo as stereo
 # image_left = cv2.pyrDown(cv2.pyrDown(cv2.imread('otherData/l5.jpg')))
 # image_right = cv2.pyrDown(cv2.pyrDown(cv2.imread('otherData/r6.jpg')))
 
-image_left = cv2.imread('test_data/tsukuba/left.png')
-image_right = cv2.imread('test_data/tsukuba/right.png')
+image_left = cv2.imread(args.left)
+image_right = cv2.imread(args.right)
 # image_left = cv2.imread('left1.png')
 # image_right = cv2.imread('right1.png')
 
