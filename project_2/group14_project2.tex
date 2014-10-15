@@ -1,0 +1,47 @@
+\documentclass[10pt]{article}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage[table]{xcolor}
+\begin{document}
+\title{CS 378: 3D Reconstruction with Computer Vision}
+\author{
+		\begin{tabular}{lll}
+		Sai Avala     & EID: ssa766\\
+		Rene Garcia    & EID: rrg696\\
+		Rohan Ramchand     & EID: rsr898
+		\end{tabular}}
+\date{October 13, 2014}
+\maketitle
+\section{Introduction}
+\label{introduction}
+\sf For this project, we were required to reconstruct a 3D scene from a stereo image ppairs. The steps for achieving this is as follows:
+\begin{itemize}
+	\item Start off with two images
+	\item Compute the Fundamental Matrix, and both homographies for both images by rectifying the pairs
+    \item Once you've rectified each of the images, warp both of the images using their respective homographies
+    \item Compute the disparity given both of the warped images and return the disparity
+    \item Pass in the disparity, the left image, and a focal length into the \textit{point\_cloud()} function to return a string that writes a \textit{.ply} file
+    \item The \textit{.ply} file is the 3D scene that is computed from the stereo image pairs and can be viewed in Meshlab
+\end{itemize}
+\sf To complete the above steps, we implemented the following functions: \textit{\\rectify\_pair(), disparity\_map(), point\_cloud()}. They are located in \textit{stereo.py}. In addition, we have a script that computes the \textit{.ply} file given a pair of stereo images - it's called \textit{stereo\_script.py}. You can run it using \textit{run\_stereo\_script.sh}.
+
+\section{rectify\_pair()}
+\label{rectifyPair}
+\sf This function takes in two arguments: image\_left and image\_right. Both of the images that are passed in are 3-channel images, which make up a stereo pair.
+The function computes the pair's fundamental matrix and both rectifying homographies. Essentially what we did to finish writing this function is by using cv2.SIFT() in order to compute the key points between both of the images. Then we used a FlannBasedMatcher using knn in order to store all the best matches according to Lowe's ratio test. Given this, we then ran cv2.findFundamentalMat() with the RANSAC algorithm in order to compute F, the fundamental matrix. Once we did that, we used cv2.stereoRectifyUncalibrated to return two homographies, one for each respectify stereo image that we passed in. Finally, we returned the fundamental matrix, a "homography left", and a "homography right".
+
+\section{disparity\_map()}
+\label{disparityMap}
+\sf This function computes the disparity between two rectified images, image\_left and image\_right, and returns a single-channel image containing disparities between both of the images. In order to compute the disparity, we went used cv2.StereoSGBM(). We found that in order to achieve the best disparity that still passes the unit tests, we let the minimum disparity equal 16, the number of disparities be a function of the minimum disparities, and uniqueness ratio equal 10. Furthermore, we let the speckle window size equal 100 and the range equal 32. Once we computed the disparity, we had to divide that by 16 an then set the type of the disparity to be "uint8". 
+
+\section{point\_cloud()}
+\label{pointCloud}
+\sf This function creates a point cloud from the disparity image, image left, and focal length, and returns a string which contains the PLY point cloud of the3D locations of the pixels, with colors sampled from the left image. Essentially what we did was that we used cv2.reprojectImageto3D using the disparity image and a transformation matrix in order to compute the total set of points, and we used cv2.cvtColor() to compute the total set of colors. By comparing the disparity image and the minimum value of it, we stored that value in a mask variable, and passed that into the points and colors arrays we computed. We then generated a PLY header, used a StringIO object to write the data too, and returned the contents of that.
+
+\section{Discussion}
+\label{discussion}
+\sf While working on this project, we noticed a few essential items to be discussed. While testing out the project on our own set of images given two different camera points of view, we noticed that because of the rotation, the disparity function would not detect everything properly. This is most likely because of the fact that when the images are warped, there is the "black" empty data around it, which is being used in the computation of the disparity\_map(). What would most likely help fix this issue is if given the warped images, compute an area inside the images where the objects overlap, which lets us compute a more accurate disparity. In addition, what we also noticed was that if we tried to tune the parameters in StereoSGBM as much as possible, then we would fail the unit tests. Furthermore, while testing out our implementations, we noticed that in order to get the best possible PLY file, we would have to make sure that the background had lots of texture and the objects in the stereo images were bold, but not a shiny color.
+
+
+\end{document}

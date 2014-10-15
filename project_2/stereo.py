@@ -45,11 +45,12 @@ def rectify_pair(image_left, image_right, viz=False):
     src_pts = np.float32([kp1[m.queryIdx].pt for m in good])
     dst_pts = np.float32([kp2[m.trainIdx].pt for m in good])
 
-    # F, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.LMEDS)
+    # find the fundamental matrix
     F, mask = cv2.findFundamentalMat(src_pts, dst_pts, cv2.RANSAC, 3, 0.99)
     src_pts = src_pts.flatten()
     dst_pts = dst_pts.flatten()
 
+    # rectify the images, produce the homographies: H_left and H_right
     retval, H_left, H_right = cv2.stereoRectifyUncalibrated(
         src_pts, dst_pts, F, image_left.shape[:2])
 
@@ -83,11 +84,13 @@ def disparity_map(image_left, image_right):
                             fullDP=False
                             )
 
-    temp_disp = stereo.compute(image_left, image_right) / 16
-    disp = np.array(temp_disp, dtype="uint8")
+    # compute the disparity and convert the 16bit disparity into 8 bit
+    disp = stereo.compute(image_left, image_right) / 16
+    disp = disp.astype('uint8')
 
     return disp
 
+# PLY file header
 ply_header = '''ply
 format ascii 1.0
 element vertex %(vert_num)d
@@ -99,16 +102,6 @@ property uchar green
 property uchar blue
 end_header
 '''
-
-
-def write_ply(fn, verts, colors):
-    # verts = verts.reshape(-1, 3)
-    # colors = colors.reshape(-1, 3)
-    verts = np.hstack([verts, colors])
-    # with open(fn, 'w') as f:
-    fn.write(ply_header % dict(vert_num=len(verts)))
-    np.savetxt(fn, verts, '%f %f %f %d %d %d')
-    return fn
 
 
 def point_cloud(disparity_image, image_left, focal_length):
@@ -129,14 +122,18 @@ def point_cloud(disparity_image, image_left, focal_length):
                     [0, -1,  0,  h / 2],  # turn points 180 deg around x-axis,
                     [0, 0, focal_length,  0],  # so that y-axis looks up
                     [0, 0,  0,  1]])
+
+    # reproject image points to 3D space, compute the colors
     points = cv2.reprojectImageTo3D(disparity_image, Q)
     colors = cv2.cvtColor(image_left, cv2.COLOR_BGR2RGB)
     mask = disparity_image > disparity_image.min()
     out_points = points[mask]
     out_colors = colors[mask]
+
+    # write PLY string data to StringIO object and return the contents
     cloud = StringIO.StringIO()
-    #cloudStuff = write_ply(cloud, out_points, out_colors)
     verts = np.hstack([out_points, out_colors])
     cloud.write(ply_header % dict(vert_num=len(verts)))
     np.savetxt(cloud, verts, '%f %f %f %d %d %d')
+
     return cloud.getvalue()
