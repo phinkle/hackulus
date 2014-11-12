@@ -55,6 +55,10 @@ function init() {
   var light = new THREE.HemisphereLight(0xffffff, 0x000000, 0.3);
   scene.add(light);
 
+  var dirLight = new THREE.DirectionalLight(0xffffff);
+  dirLight.position.set( 0, 0, 1);
+  scene.add(dirLight);
+
   var texture = THREE.ImageUtils.loadTexture(
     'textures/patterns/checker.png'
   );
@@ -98,7 +102,7 @@ function init() {
     var onError = function ( xhr ) {
     };
 
-
+    // load texture
     var loader = new THREE.ImageLoader( manager );
     loader.load( 'textures/UV_Grid_Sm.jpg', function ( image ) {
 
@@ -107,23 +111,27 @@ function init() {
 
     } );
 
-    // model
-
+    // load model
     var loader = new THREE.OBJLoader( manager );
-    loader.load( 'obj/male02/male02.obj', function ( object ) {
+    loader.load( 'obj/male02.obj', function ( object ) {
 
       object.traverse( function ( child ) {
 
         if ( child instanceof THREE.Mesh ) {
 
           child.material.map = texture;
+          console.log("Adding texture...");
 
         }
 
       } );
 
       object.position.y = 0;
-      object.position.x = 100;
+      object.position.x = 15;
+      object.rotation.y = -Math.PI / 4;
+      object.scale.x = .1;
+      object.scale.y = .1;
+      object.scale.z = .1;
       scene.add( object );
 
     }, onProgress, onError );
