@@ -41,10 +41,6 @@ function init() {
       return;
     }
 
-    controls = new THREE.DeviceOrientationControls(camera, true);
-    controls.connect();
-    controls.update();
-
     element.addEventListener('click', fullscreen, false);
 
     window.removeEventListener('deviceorientation', setOrientationControls);
@@ -132,6 +128,9 @@ function init() {
       object.scale.x = .1;
       object.scale.y = .1;
       object.scale.z = .1;
+      controls = new THREE.DeviceOrientationControls(object, true);
+      controls.connect();
+      controls.update();
       scene.add( object );
 
     }, onProgress, onError );
