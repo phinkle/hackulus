@@ -21,42 +21,44 @@
 
 using namespace cv;
 
-//static int matchImage = 0;
+static float epsilon = 0.000001f;
+static int matchImage = 0;
+static string filepath = "/Users/staticsoccer/Downloads/statue-fixed/";
 
 struct KinectFrame
 {
     Mat image;
     std::vector<float> depths;
     
-    KinectFrame(const Mat& img, const std::vector<float>& dists)
+    KinectFrame(Mat img, const std::vector<float>& dists)
     : image(img), depths(dists)
     {
     }
     
-    float getDepth(int x, int y) const
+    int getDepth(int x, int y) const
     {
         int index = image.cols * x + y;
         return depths[index];
     }
     
-    float getRed(int x, int y) const
+    int getRed(int x, int y) const
     {
         return image.at<Vec3b>(x, y)[2];
     }
     
-    float getGreen(int x, int y) const
+    int getGreen(int x, int y) const
     {
         return image.at<Vec3b>(x, y)[1];
     }
     
-    float getBlue(int x, int y) const
+    int getBlue(int x, int y) const
     {
         return image.at<Vec3b>(x, y)[0];
     }
     
-    Point3f getPoint(int x, int y) const
+    Point3i getPoint(int x, int y) const
     {
-        return Point3f(x, y, getDepth(x, y));
+        return Point3i(x, y, getDepth(x, y));
     }
 };
 
@@ -66,11 +68,11 @@ vector<std::pair<Point3f, Point3f> > findFeatureMatches(const KinectFrame& frame
 
 Mat findTransform(const vector<std::pair<Point3f, Point3f> >& matches);
 
-void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, const Mat& transform);
+void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, Mat transform);
 
 string posint(int x);
 
-void print(const Mat& x)
+void print(Mat x)
 {
     for (int i = 0; i < x.rows; ++i)
     {
@@ -84,7 +86,6 @@ void print(const Mat& x)
 
 int main(int argc, char** argv)
 {
-    string filepath = "/Users/staticsoccer/Downloads/mini-statue-2/";
     std::ifstream file(filepath + "config.txt");
     string line;
     
@@ -96,10 +97,9 @@ int main(int argc, char** argv)
     
     vector<KinectFrame> frames;
     
-    for (int i = 0; i < files; ++i)
+    for (int i = 0; i < files ; ++i)
     {
         string index = posint(i);
-//        std::cout << i << " " << index << std::endl;
         string imageFilename = filepath + "image_" + index + ".png";
         string depthFilename = filepath + "depth_" + index + ".txt";
         
@@ -107,49 +107,60 @@ int main(int argc, char** argv)
     }
     
     vector<Vec<float, 6> > ply;
-    Mat lastTransform = Mat::eye(3, 4, CV_32F);
+    Mat lastTransform = Mat::eye(4, 4, CV_32F);
     addPlyPoints(ply, frames[0], lastTransform);
     
     for (int i = 1; i < frames.size(); ++i)
     {
         vector<std::pair<Point3f, Point3f> > matches = findFeatureMatches(frames[i - 1], frames[i]);
-//        Mat transform = findTransform(matches);
-//        lastTransform *= transform;
-//        addPlyPoints(ply, frames[i], lastTransform);
-    }
-//    
-//    std::ofstream plyFile;
-//    
-//    plyFile.open("test.ply");
-//    plyFile << "ply" << std::endl;
-//    plyFile << "\tformat ascii 1.0" << std::endl;
-//    plyFile << "\telement vertex " << ply.size() << std::endl;
-//    plyFile << "\tproperty float x" << std::endl;
-//    plyFile << "\tproperty float y" << std::endl;
-//    plyFile << "\tproperty float z" << std::endl;
-//    plyFile << "\tproperty uchar red" << std::endl;
-//    plyFile << "\tproperty uchar green" << std::endl;
-//    plyFile << "\tproperty uchar blue" << std::endl;
-//    plyFile << "\tend_header" << std::endl;
-//    
-//    for (int i = 0; i < ply.size(); ++i)
-//    {
-//        plyFile << ply[i][0] << ply[i][1] << ply[i][2] << round(ply[i][3]) << round(ply[i][4]) << round(ply[i][5]) << std::endl;
-//    }
-}
-
-void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, const Mat& transform)
-{
-    vector<Point3f> inPts, outPts;
-    for (int i = 0; i < frame.image.rows; ++i)
-    {
-        for (int j = 0; j < frame.image.cols; ++j)
+        
+        if (matches.empty())
         {
-            inPts.push_back(frame.getPoint(i, j));
+            continue;
         }
+        
+        Mat transform = findTransform(matches);
+        lastTransform = transform * lastTransform;
+        addPlyPoints(ply, frames[i], lastTransform);
     }
     
-    perspectiveTransform(inPts, outPts, transform);
+    std::fstream plyFile;
+    
+    plyFile.open(filepath + "test.ply", std::fstream::out);
+    plyFile << "ply" << std::endl;
+    plyFile << "format ascii 1.0" << std::endl;
+    plyFile << "element vertex " << ply.size() << std::endl;
+    plyFile << "property float x" << std::endl;
+    plyFile << "property float y" << std::endl;
+    plyFile << "property float z" << std::endl;
+    plyFile << "property uchar red" << std::endl;
+    plyFile << "property uchar green" << std::endl;
+    plyFile << "property uchar blue" << std::endl;
+    plyFile << "end_header" << std::endl;
+    
+    for (int i = 0; i < ply.size(); ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            plyFile << ply[i][j] << " ";
+        }
+        
+        for (int j = 0; j < 2; ++j)
+        {
+            plyFile << round(ply[i][j + 3]) << " ";
+        }
+        
+        plyFile << round(ply[i][5]) << std::endl;
+    }
+    
+    plyFile.close();
+}
+
+void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, Mat transform)
+{
+    
+    float data[4][1];
+    data[3][0] = 1.0f;
     
     int index = 0;
     for (int i = 0; i < frame.image.rows; ++i)
@@ -159,11 +170,26 @@ void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, const M
             int red = frame.getRed(i, j);
             int blue = frame.getBlue(i, j);
             int green = frame.getGreen(i, j);
+            
+            const Point3i& p = frame.getPoint(i, j);
+            
+            if (p.z <= epsilon)
+            {
+                continue;
+            }
+            
+            data[0][0] = p.x;
+            data[1][0] = p.y;
+            data[2][0] = p.z;
+            
+            Mat pMat(4, 1, CV_32F, data);
+            
+            Mat transformedPoint = transform * pMat;
 
             Vec<float, 6> point;
-            point[0] = outPts[index].x;
-            point[1] = outPts[index].y;
-            point[2] = outPts[index].z;
+            point[0] = transformedPoint.at<float>(0, 0);
+            point[1] = transformedPoint.at<float>(1, 0);
+            point[2] = transformedPoint.at<float>(2, 0);
             point[3] = red;
             point[4] = green;
             point[5] = blue;
@@ -206,8 +232,7 @@ Mat findTransform(const vector<std::pair<Point3f, Point3f> >& matches)
     centroidA *= 1.0f / matches.size();
     centroidB *= 1.0f / matches.size();
     
-    Mat h(3, 3, CV_32F);
-    print(h);
+    Mat h = Mat::zeros(3, 3, CV_32F);
     
     for (int i = 0; i < matches.size(); ++i)
     {
@@ -218,7 +243,7 @@ Mat findTransform(const vector<std::pair<Point3f, Point3f> >& matches)
         {
             for (int k = 0; k < 3; ++k)
             {
-                h.at<float>(i, j) += get(transA, j) * get(transB, k);
+                h.at<float>(j, k) += get(transA, j) * get(transB, k);
             }
         }
     }
@@ -243,18 +268,28 @@ Mat findTransform(const vector<std::pair<Point3f, Point3f> >& matches)
     Mat centroidAMatrix(3, 1, CV_32F, centroidAData);
     Mat centroidBMatrix(3, 1, CV_32F, centroidBData);
     
-    Mat rotation = h.t() * vt.t();
+    Mat rotation = vt.t() * u.t();
     Mat translation = -rotation * centroidAMatrix + centroidBMatrix;
-    translation = translation.t();
     
-    Mat transform(4, 3, CV_32F);
+    Mat transform(4, 4, CV_32F);
     
-    rotation.row(0).copyTo(transform.row(0));
-    rotation.row(1).copyTo(transform.row(1));
-    rotation.row(2).copyTo(transform.row(2));
-    translation.row(0).copyTo(transform.row(3));
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            transform.at<float>(i, j) = float(rotation.at<float>(i, j));
+        }
+    }
     
-    return transform.t();
+    for (int i = 0; i < 3; ++i)
+    {
+        transform.at<float>(i, 3) = float(translation.at<float>(i, 0));
+        transform.at<float>(3, i) = 0.0f;
+    }
+    
+    transform.at<float>(3, 3) = 1.0f;
+    
+    return transform;
 }
 
 string posint(int x)
@@ -293,93 +328,108 @@ float cosine(const Point2f& a, const Point2f b)
 
 vector<std::pair<Point3f, Point3f> > findFeatureMatches(const KinectFrame& frameA, const KinectFrame& frameB)
 {
-    string filepath = "/Users/staticsoccer/Downloads/mini-statue-2/";
-
     Mat grayA;
     Mat grayB;
     
     cvtColor(frameA.image, grayA, CV_BGR2GRAY);
     cvtColor(frameB.image, grayB, CV_BGR2GRAY);
     
-    int minHessian = 400;
     
-    SurfFeatureDetector detector(minHessian);
+    Ptr<FeatureDetector> detector;
+    detector = new DynamicAdaptedFeatureDetector ( new FastAdjuster(10,true), 5000, 10000, 10);
     std::vector<KeyPoint> kpA, kpB;
     
-    detector.detect(grayA, kpA);
-    detector.detect(grayB, kpB);
+    detector->detect(grayA, kpA);
+    detector->detect(grayB, kpB);
+
     
-    //    Mat kpImageA; Mat kpImageB;
-    
-    //    drawKeypoints(imageA, kpA, kpImageA);
-    //    drawKeypoints(imageB, kpB, kpImageB);
-    
-    //    imshow("Keypoints A", kpImageA);
-    //    imshow("Keypoints B", kpImageB);
-    
-    SurfDescriptorExtractor extractor;
+    Ptr<DescriptorExtractor> extractor = DescriptorExtractor::create("SIFT");
     Mat descA, descB;
     
-    extractor.compute(grayA, kpA, descA);
-    extractor.compute(grayB, kpB, descB);
+    extractor->compute(grayA, kpA, descA);
+    extractor->compute(grayB, kpB, descB);
     
-    BFMatcher matcher;
-    std::vector<DMatch> matches;
+    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+    vector<vector<DMatch> > matches;
     
-    matcher.match(descA, descB, matches);
-    
-    double minDist = matches[0].distance;
-    double maxDist = matches[0].distance;
-    
-    for (int i = 1; i < matches.size(); ++i)
-    {
-        double dist = matches[i].distance;
-        
-        if (dist > maxDist)
-        {
-            maxDist = dist;
-        }
-        
-        if (dist < minDist)
-        {
-            minDist = dist;
-        }
-    }
+    matcher->knnMatch(descA, descB, matches, 500);
     
     std::vector<DMatch> goodMatches;
     
     Point2f left(-1.0f, 0.0f);
     Point2f right(1.0f, 0.0f);
-    float threshold = 0.975f;
+    float threshold = 0.99f;
     
-    for (int i = 0; i < matches.size(); ++i)
+    double tresholdDist = 0.05 * sqrt(double(grayA.size().height*grayA.size().height + grayA.size().width*grayA.size().width));
+    
+    for (size_t i = 0; i < matches.size(); ++i)
     {
-        const Point2f& pA = kpA[matches[i].queryIdx].pt;
-        const Point2f& pB = kpB[matches[i].trainIdx].pt;
-        
-        const Point2f p = pA - pB;
-        
-//        std::cout << p.x << " " << p.y << ": " << cosine(p, left) << ", " <<  cosine(p, right) << std::endl;
-        
-        float l = cosine(p, left);
-        float r = cosine(p, right);
-        
-        if (l < 0.0f)
+        for (int j = 0; j < matches[i].size(); j++)
         {
-            l = -l;
-        }
-        
-        if (r < 0.0f)
-        {
-            r = -r;
-        }
-        
-        if (l >= threshold || r >= threshold)
-        {
-            if (matches[i].distance)
-            goodMatches.push_back(matches[i]);
+            Point2f from = kpA[matches[i][j].queryIdx].pt;
+            Point2f to = kpB[matches[i][j].trainIdx].pt;
+            
+            const Point2f p = from - to;
+            
+            float l = cosine(p, left);
+            float r = cosine(p, right);
+            
+            if (l < 0.0f)
+            {
+                l = -l;
+            }
+            
+            if (r < 0.0f)
+            {
+                r = -r;
+            }
+            //calculate local distance for each possible match
+            double dist = sqrt((from.x - to.x) * (from.x - to.x) + (from.y - to.y) * (from.y - to.y));
+            
+            //save as best match if local distance is in specified area and on same height
+            if (dist < tresholdDist && abs(from.y-to.y)<5 && (l >= threshold || r >= threshold))
+            {
+                goodMatches.push_back(matches[i][j]);
+                j = (int) matches[i].size();
+            }
         }
     }
+    
+//    for (int i = 0; i < matches.size(); ++i)
+//    {
+//        const Point2i& pA = kpA[matches[i].queryIdx].pt;
+//        const Point2i& pB = kpB[matches[i].trainIdx].pt;
+//        
+//        int depthA = frameA.getDepth(round(pA.x), round(pA.y));
+//        int depthB = frameB.getDepth(round(pB.x), round(pB.y));
+//    
+//        const Point2f p = pA - pB;
+//        
+//        float l = cosine(p, left);
+//        float r = cosine(p, right);
+//        
+//        if (l < 0.0f)
+//        {
+//            l = -l;
+//        }
+//        
+//        if (r < 0.0f)
+//        {
+//            r = -r;
+//        }
+//        
+//        if (l >= threshold || r >= threshold)
+//        {
+////            if (depthA > epsilon || depthB > epsilon)
+//            {
+//                goodMatches.push_back(matches[i]);
+//            }
+////            else
+////            {
+////                std::cout << depthA << ", " << depthB << std::endl;
+////            }
+//        }
+//    }
     
     vector<std::pair<Point3f, Point3f> > pointMatches;
     
@@ -400,6 +450,7 @@ vector<std::pair<Point3f, Point3f> > findFeatureMatches(const KinectFrame& frame
 //    imshow("Matches", imageMatches);
 //    imwrite(filepath + "imageMatch_" + posint(matchImage++) + ".png", imageMatches);
 //    waitKey(0);
+//    std::cout << matchImage++ << std::endl;
     
     return pointMatches;
 }
@@ -429,54 +480,4 @@ KinectFrame getKinectFrame(string imageFilename, string depthFilename)
     }
     
     return KinectFrame(image, depths);
-}
-
-/**
- * Reads in a .ply file into a std::Vector, where its elements
- * are cv:Vec's of 6 floats.
- *
- * @param filename the filename of the .ply file.
- * @param headerLength the number of lines representing the header, or in other words,
- * the number of lines to ignore.
- * @param points3D the vector to receive the point cloud
- *
- * @return true if the points were successfully retrieved; otherwise false.
- */
-bool readInPly(string filename, int headerLength, vector<Vec<float, 6> >& points3D)
-{
-    std::ifstream file(filename);
-    string line;
-    
-    if (!file.is_open())
-    {
-        return false;
-    }
-    
-    // Header description of input
-    for (int i = 0; i < 10; ++i)
-    {
-        getline(file, line);
-    }
-    
-    // Retreival of all vertices into a std::vector
-    while (getline(file, line))
-    {
-        std::istringstream in(line);
-        
-        float x, y, z, r, g, b;
-        in >> x >> y >> z >> r >> g >> b;
-        
-        Vec<float, 6> point;
-        point[0] = x;
-        point[1] = y;
-        point[2] = z;
-        point[3] = r;
-        point[4] = g;
-        point[5] = b;
-        
-        points3D.push_back(point);
-    }
-    
-    file.close();
-    return true;
 }
