@@ -23,7 +23,7 @@ using namespace cv;
 
 static float epsilon = 0.000001f;
 static float errorThreshold = 5.0f;
-static float pixelDistance = 2.0f;
+static float pixelDistance = 4.0f;
 static float pi = 3.141592653f;
 static int matchImage = 0;
 static string filepath = "/Users/staticsoccer/Downloads/statue-fixed-inverted/";
@@ -138,21 +138,33 @@ float cosine(const Point2f& a, const Point2f b)
 }
 
 // Transforms points based on rotation and translation
-void rigidTransformPoints(const Mat& input, const Mat& rotation, const Mat& translation, Mat& output)
+void transformPoints(const Mat& input, const Mat& rotation, const Mat& translation, Mat& output)
 {
     output = input * rotation;
     
     for (int i = 0; i < input.rows; ++i)
     {
-        output.row(i) += translation.t();
+        output.row(i) += translation;
     }
+}
+
+void findCentroid(const Mat& m, Mat& centroid)
+{
+    centroid = Mat::zeros(1, 3, CV_32F);
+    
+    for (int i = 0; i < m.rows; ++i)
+    {
+        centroid += m.row(i);
+    }
+    
+    centroid *= 1.0f / m.rows;
 }
 
 // Adds a frame's image based on the rotation and translation to a .ply file.
 void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, Mat rotation, Mat translation)
 {
     
-    float data[3][1];
+    float data[1][3];
     
     for (int i = 0; i < frame.image.rows; ++i)
     {
@@ -170,11 +182,11 @@ void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, Mat rot
             }
             
             data[0][0] = p.x;
-            data[1][0] = p.y;
-            data[2][0] = p.z;
+            data[0][1] = p.y;
+            data[0][2] = p.z;
             
-            Mat pMat(3, 1, CV_32F, data);
-            Mat transformedPoint = pMat.t() * rotation + translation.t();
+            Mat pMat(1, 3, CV_32F, data);
+            Mat transformedPoint = pMat * rotation + translation;
             
             Vec<float, 6> point;
             point[0] = float(transformedPoint.at<float>(0, 0));
@@ -190,32 +202,22 @@ void addPlyPoints(vector<Vec<float, 6> >& ply, const KinectFrame& frame, Mat rot
 }
 
 // Finds the rigid transform, rotation and translation, that moves matchA to matchB.
-void findTransform(const Mat& matchA, const Mat& matchB, Mat& rot, Mat& trans)
+void findTransform(const Mat& matchA, const Mat& matchB, Mat& rot, Mat& trans, Mat& centroidA, Mat& centroidB)
 {
     assert(matchA.size == matchB.size);
     
     Mat mA = matchA.clone();
     Mat mB = matchB.clone();
     
-    Mat centroidA = Mat::zeros(1, 3, CV_32F);
-    Mat centroidB = Mat::zeros(1, 3, CV_32F);
+    findCentroid(mA, centroidA);
+    findCentroid(mB, centroidB);
     
-    for (int i = 0; i < mA.rows; ++i)
-    {
-        centroidA += mA.row(i);
-        centroidB += mB.row(i);
-    }
-    
-    centroidA *= 1.0f / mA.rows;
-    centroidB *= 1.0f / mB.rows;
-    
-    // TODO: Destructive here, despite const reference
     for (int i = 0; i < mA.rows; ++i)
     {
         mA.row(i) -= centroidA;
         mB.row(i) -= centroidB;
     }
-    
+
     Mat h = mA.t() * mB;
     
     Mat w, u, vt;
@@ -227,11 +229,12 @@ void findTransform(const Mat& matchA, const Mat& matchB, Mat& rot, Mat& trans)
     {
         rotation.col(2) = -rotation.col(2);
     }
+    std::cout << "Determinant:\t" << determinant(rotation) << std::endl;
     
     Mat translation = -rotation * centroidA.t() + centroidB.t();
     
     rot = rotation.t();
-    trans = translation;
+    trans = translation.t();
 }
 
 // Finds corresponding 3D points using the kinect's rgb images and depth parameters.
@@ -258,10 +261,14 @@ void findFeatureMatches(const KinectFrame& frameA, const KinectFrame& frameB, Ma
     extractor->compute(grayA, kpA, descA);
     extractor->compute(grayB, kpB, descB);
     
-    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
-    vector<vector<DMatch> > matches;
+//    Ptr<DescriptorMatcher> matcher = DescriptorMatcher::create("BruteForce");
+//    vector<vector<DMatch> > matches;
+//    
+//    matcher->knnMatch(descA, descB, matches, 1);
     
-    matcher->knnMatch(descA, descB, matches, 2);
+    BFMatcher matcher(NORM_L2);
+    std::vector<DMatch> matches;
+    matcher.match(descA, descB, matches);
     
     std::vector<DMatch> goodMatches;
     
@@ -269,40 +276,67 @@ void findFeatureMatches(const KinectFrame& frameA, const KinectFrame& frameB, Ma
     Point2f right(1.0f, 0.0f);
     float threshold = 0.999f;
     
-    // The maximum number of pixels to be apart
-    
-    for (size_t i = 0; i < matches.size(); ++i)
+    for (int i = 0; i < matches.size(); ++i)
     {
-        for (int j = 0; j < matches[i].size(); j++)
+        Point2f from = kpA[matches[i].queryIdx].pt;
+        Point2f to = kpB[matches[i].trainIdx].pt;
+        
+        const Point2f p = from - to;
+        
+        float l = cosine(p, left);
+        float r = cosine(p, right);
+        
+        if (l < 0.0f)
         {
-            Point2f from = kpA[matches[i][j].queryIdx].pt;
-            Point2f to = kpB[matches[i][j].trainIdx].pt;
-            
-            const Point2f p = from - to;
-            
-            float l = cosine(p, left);
-            float r = cosine(p, right);
-            
-            if (l < 0.0f)
-            {
-                l = -l;
-            }
-            
-            if (r < 0.0f)
-            {
-                r = -r;
-            }
-            //calculate local distance for each possible match
-            double dist = sqrt((from.x - to.x) * (from.x - to.x) + (from.y - to.y) * (from.y - to.y));
-            
-            //save as best match if local distance is in specified area and on same height
-            if (dist < pixelDistance && (l >= threshold || r >= threshold))
-            {
-                goodMatches.push_back(matches[i][j]);
-                j = (int) matches[i].size();
-            }
+            l = -l;
+        }
+        
+        if (r < 0.0f)
+        {
+            r = -r;
+        }
+
+        if (l >= threshold || r >= threshold)
+        {
+            goodMatches.push_back(matches[i]);
         }
     }
+    
+    // The maximum number of pixels to be apart
+    
+//    for (size_t i = 0; i < matches.size(); ++i)
+//    {
+//        for (int j = 0; j < matches[i].size(); ++j)
+//        {
+//            Point2f from = kpA[matches[i][j].queryIdx].pt;
+//            Point2f to = kpB[matches[i][j].trainIdx].pt;
+//            
+//            const Point2f p = from - to;
+//            
+//            float l = cosine(p, left);
+//            float r = cosine(p, right);
+//            
+//            if (l < 0.0f)
+//            {
+//                l = -l;
+//            }
+//            
+//            if (r < 0.0f)
+//            {
+//                r = -r;
+//            }
+//
+//            //calculate local distance for each possible match
+//            double dist = length(p);
+//            
+//            //save as best match if local distance is in specified area and on same height
+//            if (dist < pixelDistance && (l >= threshold || r >= threshold))
+//            {
+//                goodMatches.push_back(matches[i][j]);
+//                j = (int) matches[i].size();
+//            }
+//        }
+//    }
     
     outA = Mat::zeros((int) goodMatches.size(), 3, CV_32F);
     outB = Mat::zeros((int) goodMatches.size(), 3, CV_32F);
@@ -325,9 +359,9 @@ void findFeatureMatches(const KinectFrame& frameA, const KinectFrame& frameB, Ma
     Mat imageMatches;
     drawMatches(frameA.image, kpA, frameB.image, kpB, goodMatches, imageMatches, Scalar::all(-1), Scalar::all(-1),
                 vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS);
-//    imshow("Matches", imageMatches);
+    imshow("Matches", imageMatches);
     imwrite(filepath + "imageMatch_" + posint(matchImage++) + ".png", imageMatches);
-//    waitKey(0);
+    waitKey(0);
 }
 
 // Stores an rgb image with depth information as a Xbox Kinect frame.
@@ -395,20 +429,11 @@ void findXZRotation(const Mat& matchA, const Mat& matchB, Mat& out)
     
     Mat mA = matchA.clone();
     Mat mB = matchB.clone();
+    Mat centroidA, centroidB;
     
-    Mat centroidA = Mat::zeros(1, 3, CV_32F);
-    Mat centroidB = Mat::zeros(1, 3, CV_32F);
+    findCentroid(matchA, centroidA);
+    findCentroid(matchB, centroidB);
     
-    for (int i = 0; i < mA.rows; ++i)
-    {
-        centroidA += mA.row(i);
-        centroidB += mB.row(i);
-    }
-    
-    centroidA *= 1.0f / mA.rows;
-    centroidB *= 1.0f / mB.rows;
-    
-    // TODO: Destructive here, despite const reference
     for (int i = 0; i < mA.rows; ++i)
     {
         mA.row(i) -= centroidA;
@@ -453,10 +478,10 @@ void test()
 {
 //    cv::theRNG().state = getTickCount();
 
-    int n = 10;
+    int n = 1000;
     Mat A = Mat::zeros(n, 3, CV_32F);
     Mat R = Mat::zeros(3, 3, CV_32F);
-    Mat T = Mat::zeros(3, 1, CV_32F);
+    Mat T = Mat::zeros(1, 3, CV_32F);
     
     randn(A, 0, 1);
 //    R.at<float>(0, 0) = cos(.5);
@@ -464,24 +489,31 @@ void test()
 //    R.at<float>(2, 0) = -sin(.5);
 //    R.at<float>(0, 2) = sin(.5);
 //    R.at<float>(1, 1) = 1.0f;
-    randn(R, 0, 1);
+//    randn(R, 0, 1);
     randn(T, 0, 1);
     
     Mat B = A * R;
     
     for (int i = 0; i < n; ++i)
     {
-        B.row(i) += T.t();
+        B.row(i) += T;
     }
+
+    Mat rot, trans, cA, cB;
+    findTransform(A, B, rot, trans, cA, cB);
     
-    Mat rot, trans;
-    findTransform(A, B, rot, trans);
-    
-    Mat C = A.clone() * rot;
+    Mat C = A.clone();
     
     for (int i = 0; i < n; ++i)
     {
-        C.row(i) += trans.t();
+//        C.row(i) -= cB;
+    }
+    
+    C = C * rot;
+    
+    for (int i = 0; i < n; ++i)
+    {
+        C.row(i) += trans;
     }
     
     print(rot);
@@ -490,7 +522,7 @@ void test()
     std::cout << std::endl;
     print(T);
     std::cout << std::endl;
-    print(trans                 );
+    print(trans);
     std::cout << std::endl;
     
     std::cout << "Total: " << error(C, B) << "; Rotation: " << error(rot, R) << "; Translation: " << error(trans, T) << std::endl;
@@ -504,12 +536,6 @@ int main(int argc, char** argv)
     
     getline(file, line);
     std::istringstream in(line);
-    
-    for (int i = 0; i < 1; ++i)
-    {
-        test();
-    }
-    
     
     int files;
     in >> files;
@@ -533,7 +559,7 @@ int main(int argc, char** argv)
     Mat rotation = Mat::eye(3, 3, CV_32F);
     
     // There has been no translation, yet, so (0.0, 0.0, 0.0)
-    Mat translation = Mat::zeros(3, 1, CV_32F);
+    Mat translation = Mat::zeros(1, 3, CV_32F);
     
     // Add the first frame to be the initial set of points in the .ply
     addPlyPoints(ply, frames[0], rotation, translation);
@@ -558,14 +584,14 @@ int main(int argc, char** argv)
         // so that this new set of correspondences can move find the
         // proper rigid transform.
         Mat matchedMoved;
-        rigidTransformPoints(mA, rotation, translation, matchedMoved);
+        transformPoints(mA, rotation, translation, matchedMoved);
         
         // Find the rigid transform from the new batch of points, to the
         // previously moved set of points. This should rotate and translate
         // the image to align with the previous set. So, given a continuous
         // rotation, the point cloud should rotate properly.
-        Mat rot, trans;
-        findTransform(mB, matchedMoved, rot, trans);
+        Mat rot, trans, cA, cB;
+        findTransform(mB, matchedMoved, rot, trans, cA, cB);
 //        findXZRotation(mB, matchedMoved, rot);
 //        trans = Mat::zeros(3, 1, CV_32F);
         
@@ -576,7 +602,7 @@ int main(int argc, char** argv)
 //        std::cout << std::endl;
         
         Mat newMoved;
-        rigidTransformPoints(mB, rot, trans, newMoved);
+        transformPoints(mB, rot, trans, newMoved);
         
         double err = error(newMoved, matchedMoved);
         std::cout << "Error[" << i << "]:\t" << err << "\t(" << mB.rows << " samples)";
