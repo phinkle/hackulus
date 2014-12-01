@@ -73,67 +73,28 @@ function init() {
 
   var geometry = new THREE.PlaneGeometry(1000, 1000);
 
-  var mesh = new THREE.Mesh(geometry, material);
-  mesh.rotation.x = -Math.PI / 2;
-  scene.add(mesh);
+  // adding ground plane
+  var m = new THREE.Mesh(geometry, material);
+  m.rotation.x = -Math.PI / 2;
+  scene.add(m);
 
-// texture
+  // loading ply file
+  var loader = new THREE.PLYLoader();
+        loader.addEventListener( 'load', function ( event ) {
+          console.log("found ply file");
 
-    var manager = new THREE.LoadingManager();
-    manager.onProgress = function ( item, loaded, total ) {
+          var geometry = event.content;
+          var material = new THREE.MeshPhongMaterial( { ambient: 0x0055ff, color: 0x0055ff, specular: 0x111111, shininess: 200 } );
+          var mesh = new THREE.Mesh( geometry, material );
 
-      console.log( item, loaded, total );
+          mesh.position.set( 30, 20, 5);
+          mesh.rotation.set( 0, - Math.PI / 2, 0 );
+          mesh.scale.set( 0.05, 0.05, 0.05 );
 
-    };
+          scene.add(mesh);
 
-    var texture = new THREE.Texture();
-
-    var onProgress = function ( xhr ) {
-      if ( xhr.lengthComputable ) {
-        var percentComplete = xhr.loaded / xhr.total * 100;
-        console.log( Math.round(percentComplete, 2) + '% downloaded' );
-      }
-    };
-
-    var onError = function ( xhr ) {
-    };
-
-    // load texture
-    var loader = new THREE.ImageLoader( manager );
-    loader.load( 'textures/UV_Grid_Sm.jpg', function ( image ) {
-
-      texture.image = image;
-      texture.needsUpdate = true;
-
-    } );
-
-    // load model
-    var loader = new THREE.OBJLoader( manager );
-    loader.load( 'obj/male02.obj', function ( object ) {
-
-      object.traverse( function ( child ) {
-
-        if ( child instanceof THREE.Mesh ) {
-
-          child.material.map = texture;
-          console.log("Adding texture...");
-
-        }
-
-      } );
-
-      object.position.y = 0;
-      object.position.x = 15;
-      object.rotation.y = -Math.PI / 4;
-      object.scale.x = .1;
-      object.scale.y = .1;
-      object.scale.z = .1;
-      controls = new THREE.DeviceOrientationControls(object, true);
-      controls.connect();
-      controls.update();
-      scene.add( object );
-
-    }, onProgress, onError );
+        } );
+        loader.load( 'ply/dolphins.ply' );
 
   window.addEventListener('resize', resize, false);
   setTimeout(resize, 1);
