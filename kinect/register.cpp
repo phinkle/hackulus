@@ -165,50 +165,62 @@ void save_point_cloud(Mat &a, string filename) {
 }
 
 int main(int argc, char **argv) {
-    if (argc < 6)
+    if (argc < 3)
         return 1;
 
-    string pc_file_a_image = argv[1];
-    string pc_file_a_depth = argv[2];
-    string pc_file_b_image = argv[3];
-    string pc_file_b_depth = argv[4];
-    string pc_file_out_ply = argv[5];
+    string pc_filepath = argv[1];
+    string pc_file_out_ply = argv[2];
+    pc_filepath += "/";
 
-    // step 1 read in two point clouds
-    std::cout << "Step 1: ";
-    Mat pc_a = load_kinect_frame(pc_file_a_image, pc_file_a_depth);
-    Mat pc_b = load_kinect_frame(pc_file_b_image, pc_file_b_depth);
-    std::cout << "complete\n";
+    std::ifstream file(pc_filepath + "config.txt");
+    string line;
+    getline(file, line);
+    std::istringstream in(line);
 
-    // step 2 call nearest_neighbors
-    for (int i = 0; i < 15; ++i) {
-        std::cout << "Step 2: ";
-        Mat a, b;
-        nearest_neighbors(pc_a, pc_b, a, b);
+    int num_images;
+    in >> num_images;
+
+    Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
+                                 pc_filepath + "depth_0.txt");
+
+    for (int image_num = 1; image_num < num_images; ++image_num) {
+        // step 1 read in two point clouds
+        std::cout << "REGISTERING IMAGE " << image_num << "\n";
+        std::cout << "Step 1: ";
+        string str_num = std::to_string(image_num);
+        Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
+                                     pc_filepath + "depth_" + str_num + ".txt");
         std::cout << "complete\n";
 
+        // step 2 call nearest_neighbors
+        for (int i = 0; i < 15; ++i) {
+            std::cout << "Step 2: ";
+            Mat a, b;
+            nearest_neighbors(pc_a, pc_b, a, b);
+            std::cout << "complete\n";
 
-        // step 3 pass into rigid transform
-        std::cout << "Step 3: ";
-        Mat r, t;
-        rigid_transform_3D(a, b, r, t);
-        std::cout << "complete\n";
+
+            // step 3 pass into rigid transform
+            std::cout << "Step 3: ";
+            Mat r, t;
+            rigid_transform_3D(a, b, r, t);
+            std::cout << "complete\n";
 
 
-        // step 4 apply transformation to second point cloud
-        std::cout << "Step 4: ";
-        pc_a = applyTransformation(pc_a, r, t);
+            // step 4 apply transformation to second point cloud
+            std::cout << "Step 4: ";
+            pc_a = applyTransformation(pc_a, r, t);
+            std::cout << "complete\n";
+        }
+
+        // step 5 repeat 2 - 5 as many times as needed
+        // step 6 combine two point clouds and output to ply file
+        std::cout << "Step 5: ";
+        Mat combined;
+        vconcat(pc_a, pc_b, combined);
+        pc_a = combined;
         std::cout << "complete\n";
     }
-
-    // step 5 repeat 2 - 5 as many times as needed
-    // step 6 combine two point clouds and output to ply file
-    std::cout << "Step 5: ";
-    Mat combined;
-    vconcat(pc_a, pc_b, combined);
-    save_point_cloud(combined, pc_file_out_ply);
-    std::cout << "complete\n";
-
-
+    save_point_cloud(pc_a, pc_file_out_ply);
     return 0;
 }
