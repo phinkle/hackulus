@@ -21,7 +21,7 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(90, 1, 0.001, 700);
-  camera.position.set(0, 10, 0);
+  camera.position.set(5, 30, 0);
   scene.add(camera);
 
   controls = new THREE.OrbitControls(camera, element);
@@ -79,30 +79,71 @@ function init() {
   scene.add(m);
 
   var mesh;
+  displayPoints("ply/pikachu.ply");
 
   // loading ply file
-  var loader = new THREE.PLYLoader();
-        loader.addEventListener( 'load', function ( event ) {
-          console.log("found ply file");
+//   var loader = new THREE.PLYLoader();
+//         loader.addEventListener( 'load', function ( event ) {
+//           console.log("found ply file");
 
-          var geometry = event.content;
-          var material = new THREE.MeshPhongMaterial( { ambient: 0x0055ff, color: 0x0055ff, specular: 0x111111, shininess: 200 } );
-          mesh = new THREE.Mesh( geometry, material );
-          controls = new THREE.DeviceOrientationControls(mesh, true);
+//           var geometry = event.content;
+//           var material = new THREE.MeshPhongMaterial( { ambient: 0x0055ff, color: 0x0055ff, specular: 0x111111, shininess: 200 } );
+//           mesh = new THREE.Mesh( geometry, material );
+//           controls = new THREE.DeviceOrientationControls(camera, true);
 
-          mesh.position.set( 30, 20, 5);
-          mesh.rotation.set( 0, - Math.PI / 2, 0 );
-          mesh.scale.set( 0.05, 0.05, 0.05 );
+//           mesh.position.set( 5, 10, 0);
+//           mesh.rotation.set( 0, - Math.PI / 2, 0 );
+//           mesh.scale.set( 50, 50, 50 );
 
-          scene.add(mesh);
+//           scene.add(mesh);
 
-        } );
-        loader.load( 'ply/dolphins.ply' );
-
-
+//         } );
+//         loader.load( 'ply/pikachu.ply' );
 
   window.addEventListener('resize', resize, false);
   setTimeout(resize, 1);
+}
+
+function displayPoints(file) {
+  var rawFile = new XMLHttpRequest();
+  rawFile.open("GET", file, false);
+  rawFile.onreadystatechange = function () {
+      if (rawFile.readyState === 4) {
+          if (rawFile.status === 200 || rawFile.status == 0) {
+              var allText = rawFile.responseText;
+              // console.log(allText);
+              parsePoints(allText);
+          }
+      }
+  }
+  rawFile.send(null);
+}
+
+function parsePoints(data) {
+  var lines = data.split("\n");
+  var geometry = new THREE.Geometry();
+  var numPoints = lines[0];
+
+  var colors = [];
+  var index = 0;
+
+  for (var i = 1; i < lines.length - 1; i++) {
+    //console.log(lines[i]);
+    var points = lines[i].split(" ");
+
+    var vector = new THREE.Vector3(points[1] - 200, (points[0] * -1) + 300, points[2]);
+    geometry.vertices.push(vector);
+    var c = new THREE.Color("rgb(" + points[5] + "," + points[4] + "," + points[3] + ")" );
+    colors[index] = c;
+
+    index++;
+  }
+  geometry.colors = colors;
+  geometry.computeBoundingBox();
+
+  var material = new THREE.PointCloudMaterial( { size: 1.0, vertexColors: THREE.VertexColors } );
+  var pointcloud = new THREE.PointCloud( geometry, material );
+  scene.add(pointcloud);
 }
 
 function resize() {
