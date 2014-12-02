@@ -78,6 +78,8 @@ function init() {
   m.rotation.x = -Math.PI / 2;
   scene.add(m);
 
+  var mesh;
+
   // loading ply file
   var loader = new THREE.PLYLoader();
         loader.addEventListener( 'load', function ( event ) {
@@ -85,7 +87,8 @@ function init() {
 
           var geometry = event.content;
           var material = new THREE.MeshPhongMaterial( { ambient: 0x0055ff, color: 0x0055ff, specular: 0x111111, shininess: 200 } );
-          var mesh = new THREE.Mesh( geometry, material );
+          mesh = new THREE.Mesh( geometry, material );
+          controls = new THREE.DeviceOrientationControls(mesh, true);
 
           mesh.position.set( 30, 20, 5);
           mesh.rotation.set( 0, - Math.PI / 2, 0 );
@@ -95,6 +98,8 @@ function init() {
 
         } );
         loader.load( 'ply/dolphins.ply' );
+
+
 
   window.addEventListener('resize', resize, false);
   setTimeout(resize, 1);
