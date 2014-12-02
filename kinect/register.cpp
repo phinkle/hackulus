@@ -5,6 +5,7 @@
 //  Created by Jonathan Lee on 11/30/14.
 //  Copyright (c) 2014 Jonathan Lee. All rights reserved.
 //
+// g++ register.cpp -o register `pkg-config --cflags --libs opencv` -O3
 
 #include <iostream>
 #include <fstream>
@@ -183,6 +184,8 @@ int main(int argc, char **argv) {
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
                                  pc_filepath + "depth_0.txt");
 
+    Mat pc_previous = pc_a.clone();
+
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
         std::cout << "REGISTERING IMAGE " << image_num << "\n";
@@ -196,7 +199,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < 15; ++i) {
             std::cout << "Step 2: ";
             Mat a, b;
-            nearest_neighbors(pc_a, pc_b, a, b);
+            nearest_neighbors(pc_previous, pc_b, a, b);
             std::cout << "complete\n";
 
 
@@ -220,6 +223,7 @@ int main(int argc, char **argv) {
         vconcat(pc_a, pc_b, combined);
         pc_a = combined;
         std::cout << "complete\n";
+        pc_previous = pc_b;
     }
     save_point_cloud(pc_a, pc_file_out_ply);
     return 0;
