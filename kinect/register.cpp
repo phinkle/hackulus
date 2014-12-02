@@ -101,12 +101,15 @@ void nearest_neighbors(flann::Index& kdtree, const Mat &pc_a, const Mat &pc_b, M
     Mat dists = Mat::zeros(1, 1, CV_32F);
     
     for (int i = 0; i < b.rows; ++i) {
+//        std::cout << b.row(i) << std::endl;
         kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(16));
-        pc_a.row(indices.at<int>(0)).colRange(0, 3).copyTo(a.row(i));
+        
+        int index = indices.at<int>(0);
+        pc_a.row(index).colRange(0, 3).copyTo(a.row(i));
     }
 }
 
-Mat load_kinect_frame(const string image_filename, const string depth_filename, double probability) {
+Mat load_kinect_frame(const string image_filename, const string depth_filename) {
     Mat image, pc;
     int dim_row, dim_col;
     
@@ -126,11 +129,10 @@ Mat load_kinect_frame(const string image_filename, const string depth_filename, 
     
     
     for (int i = 0; getline(file, line); ++i) {
-        double uniform = (rand()/(double)(RAND_MAX));
         std::istringstream in(line);
         float x, y, z, b, g, r;
         in >> z;
-        if (z > 0 && uniform <= probability) {
+        if (z > 0) {
             x = i / dim_col;
             y = i % dim_col;
             b = image.at<Vec3b>(i, 0)[0];
@@ -217,6 +219,29 @@ void applyRotationsAndTranslations(Mat& m, const vector<Mat>& rotations, const v
     }
 }
 
+Mat selectRandomPoints(const Mat& pts, double probability)
+{
+    std::vector<Mat> points;
+    
+    for (int i = 0; i < pts.rows; ++i)
+    {
+        double uniform = (rand() / ((double) RAND_MAX));
+        
+        if (uniform <= probability)
+        {
+            points.push_back(pts.row(i).clone());
+        }
+    }
+    
+    Mat sample = Mat::zeros((int) points.size(), pts.cols, CV_32F);
+    for (int i = 0; i < points.size(); ++i)
+    {
+        points[i].copyTo(sample.row(i));
+    }
+    
+    return sample;
+}
+
 int main(int argc, char **argv) {
     if (argc < 4)
         return 1;
@@ -236,7 +261,9 @@ int main(int argc, char **argv) {
     in >> num_images;
     
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
-                                 pc_filepath + "depth_0.txt", probability);
+                                 pc_filepath + "depth_0.txt");
+    
+    Mat allSamples = selectRandomPoints(pc_a, probability);
     
     Mat transformation = Mat::eye(4, 4, CV_32F);
     Mat rotation, translation;
@@ -244,54 +271,48 @@ int main(int argc, char **argv) {
     
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
-        std::cout << "REGISTERING IMAGE " << image_num << "\n";
-        std::cout << "Step 1: ";
+        std::cout << "REGISTERING IMAGE " << image_num << std::endl;
+//        std::cout << "Step 1: ";
         time = clock();
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
-                                     pc_filepath + "depth_" + str_num + ".txt", probability);
-        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
+                                     pc_filepath + "depth_" + str_num + ".txt");
+        
+        Mat pc_b_sample = selectRandomPoints(pc_b, probability);
+        
+//        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         
         extractRigidTransform(transformation, rotation, translation);
+        pc_b_sample = applyTransformation(pc_b_sample, rotation, translation);
         pc_b = applyTransformation(pc_b, rotation, translation);
         
         // step 2 call nearest_neighbors
         for (int i = 0; i < icp_num_iters; ++i) {
-            std::cout << "Construction of KD-tree" << std::endl;
-            time = clock();
-            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
-            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
-            std::cout << "Step 2: ";
-            time = clock();
+            flann::Index kdtree(allSamples.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
+
             Mat a, b;
-            nearest_neighbors(kdtree, pc_a, pc_b, a, b);
-            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
-            
+            nearest_neighbors(kdtree, allSamples, pc_b_sample, a, b);
             
             // step 3 pass into rigid transform
-            std::cout << "Step 3: ";
-            time = clock();
             Mat r, t;
             rigid_transform_3D(b, a, r, t);
-            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
-            
             
             // step 4 apply transformation to second point cloud
-            std::cout << "Step 4: ";
-            time = clock();
+            pc_b_sample = applyTransformation(pc_b_sample, r, t);
             pc_b = applyTransformation(pc_b, r, t);
             transformation *= getRigidTransform(r, t);
-            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         }
         
         // step 5 repeat 2 - 5 as many times as needed
+        
         // step 6 combine two point clouds and output to ply file
-        std::cout << "Step 5: ";
-        time = clock();
-        Mat combined;
+        Mat combined, combinedSample;
         vconcat(pc_a, pc_b, combined);
+        vconcat(allSamples, pc_b_sample, combinedSample);
         pc_a = combined;
-        save_point_cloud(pc_a, pc_file_out_ply);
+        allSamples = combinedSample;
+//        save_point_cloud(pc_a, pc_file_out_ply);
+        save_point_cloud(allSamples, pc_file_out_ply);
         std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
     }
     
