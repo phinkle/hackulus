@@ -13,6 +13,9 @@
 #include <sstream>
 #include <vector>
 #include <utility>
+#include <queue>
+#include <cmath>
+#include <time.h>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -90,13 +93,12 @@ void rigid_transform_3D(const Mat &a, const Mat &b, Mat &r, Mat &t) {
 // "Returns" matrices a and b, which are both mx3 matrices
 // the zip of the two matrices represents the (x, y, z) of the
 // points that match
-void nearest_neighbors(const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
-    Mat pc_a_view = pc_a.colRange(0, 3).clone();
-    flann::Index kdtree(pc_a_view, flann::KDTreeIndexParams(4));
+void nearest_neighbors(flann::Index& kdtree, const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
     a = Mat::zeros(pc_b.rows, 3, CV_32F);
     b = pc_b.colRange(0, 3).clone();
     Mat indices = Mat::zeros(1, 1, CV_32F);
     Mat dists = Mat::zeros(1, 1, CV_32F);
+    
     for (int i = 0; i < b.rows; ++i) {
         kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(64));
         pc_a.row(indices.at<int>(0)).colRange(0, 3).copyTo(a.row(i));
@@ -232,53 +234,58 @@ int main(int argc, char **argv) {
                                  pc_filepath + "depth_0.txt");
     
     Mat transformation = Mat::eye(4, 4, CV_32F);
-    
     Mat rotation, translation;
+    clock_t time;
     
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
         std::cout << "REGISTERING IMAGE " << image_num << "\n";
         std::cout << "Step 1: ";
+        time = clock();
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
                                      pc_filepath + "depth_" + str_num + ".txt");
-        std::cout << "complete\n";
+        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         
         extractRigidTransform(transformation, rotation, translation);
         pc_b = applyTransformation(pc_b, rotation, translation);
         
-        
         // step 2 call nearest_neighbors
         for (int i = 0; i < icp_num_iters; ++i) {
+            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
             std::cout << "Step 2: ";
+            time = clock();
             Mat a, b;
-            // TODO: Change to use a stored KD-tree
-            nearest_neighbors(pc_a, pc_b, a, b);
-            std::cout << "complete\n";
+            nearest_neighbors(kdtree, pc_a, pc_b, a, b);
+            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             
             
             // step 3 pass into rigid transform
             std::cout << "Step 3: ";
+            time = clock();
             Mat r, t;
             rigid_transform_3D(b, a, r, t);
-            std::cout << "complete\n";
+            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             
             
             // step 4 apply transformation to second point cloud
             std::cout << "Step 4: ";
+            time = clock();
             pc_b = applyTransformation(pc_b, r, t);
             transformation *= getRigidTransform(r, t);
-            std::cout << "complete\n";
+            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         }
         
         // step 5 repeat 2 - 5 as many times as needed
         // step 6 combine two point clouds and output to ply file
         std::cout << "Step 5: ";
+        time = clock();
         Mat combined;
         vconcat(pc_a, pc_b, combined);
         pc_a = combined;
         save_point_cloud(pc_a, pc_file_out_ply);
-        std::cout << "complete\n";
+        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
     }
+    
     return 0;
 }
