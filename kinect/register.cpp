@@ -165,6 +165,43 @@ void save_point_cloud(Mat &a, string filename) {
     plyFile.close();
 }
 
+Mat get_rotation_translation_matrix(const Mat& rotation, const Mat& translation)
+{
+    Mat matrix = Mat::eye(4, 4, CV_32F);
+
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            matrix.at<float>(i, j) = rotation.at<float>(i, j);
+        }
+    }
+
+    matrix.at<float>(0, 3) = translation.at<float>(0, 0);
+    matrix.at<float>(1, 3) = translation.at<float>(0, 1);
+    matrix.at<float>(2, 3) = translation.at<float>(0, 2);
+
+    return matrix;
+}
+
+void get_rotation_translation_from_matrix(const Mat& matrix, Mat& rotation, Mat& translation)
+{
+    rotation = Mat::zeros(3, 3, CV_32F);
+    translation = Mat::zeros(1, 3, CV_32F);
+
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            rotation.at<float>(i, j) = matrix.at<float>(i, j);
+        }
+    }
+
+    translation.at<float>(0, 0) = matrix.at<float>(0, 3);
+    translation.at<float>(0, 1) = matrix.at<float>(1, 3);
+    translation.at<float>(0, 2) = matrix.at<float>(2, 3);
+}
+
 int main(int argc, char **argv) {
     if (argc < 3)
         return 1;
@@ -185,7 +222,8 @@ int main(int argc, char **argv) {
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
                                  pc_filepath + "depth_0.txt");
 
-    Mat pc_previous = pc_a.clone();
+    Mat transformation = Mat::eye(4, 4, CV_32F);
+    Mat r, t;
 
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
@@ -194,26 +232,29 @@ int main(int argc, char **argv) {
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
                                      pc_filepath + "depth_" + str_num + ".txt");
+
+        get_rotation_translation_from_matrix(transformation, r, t);
+        applyTransformation(pc_b, r, t);
         std::cout << "complete\n";
 
         // step 2 call nearest_neighbors
         for (int i = 0; i < icp_num_iters; ++i) {
             std::cout << "Step 2: ";
             Mat a, b;
-            nearest_neighbors(pc_previous, pc_b, a, b);
+            nearest_neighbors(pc_a, pc_b, a, b);
             std::cout << "complete\n";
 
 
             // step 3 pass into rigid transform
             std::cout << "Step 3: ";
-            Mat r, t;
             rigid_transform_3D(a, b, r, t);
             std::cout << "complete\n";
 
-
             // step 4 apply transformation to second point cloud
             std::cout << "Step 4: ";
-            pc_a = applyTransformation(pc_a, r, t);
+            pc_b = applyTransformation(pc_b, r, t);
+            Mat newTransform = get_rotation_translation_matrix(r, t);
+            transformation *= newTransform;
             std::cout << "complete\n";
         }
 
@@ -225,7 +266,6 @@ int main(int argc, char **argv) {
         pc_a = combined;
         save_point_cloud(pc_a, pc_file_out_ply);
         std::cout << "complete\n";
-        pc_previous = pc_b;
     }
     return 0;
 }
