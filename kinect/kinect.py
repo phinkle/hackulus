@@ -49,7 +49,7 @@ while True:
     if num_frame >= 0:
         num_frame += 1
 
-    if num_frame % 10 == 0:
+    if num_frame % 3 == 0:
         num_frame = 0
         depth_map[depth_map >= depth_range] = unknown
         depth_map[depth_map > unknown] = depth_range - depth_map[depth_map > unknown] + 1
