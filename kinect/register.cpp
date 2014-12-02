@@ -16,6 +16,7 @@
 #include <queue>
 #include <cmath>
 #include <time.h>
+#include <cstdlib>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -105,7 +106,7 @@ void nearest_neighbors(flann::Index& kdtree, const Mat &pc_a, const Mat &pc_b, M
     }
 }
 
-Mat load_kinect_frame(const string image_filename, const string depth_filename) {
+Mat load_kinect_frame(const string image_filename, const string depth_filename, double probability) {
     Mat image, pc;
     int dim_row, dim_col;
     
@@ -122,11 +123,14 @@ Mat load_kinect_frame(const string image_filename, const string depth_filename) 
     pc = Mat::zeros(1, 6, CV_32F);
     pc.pop_back(1);
     string line;
+    
+    
     for (int i = 0; getline(file, line); ++i) {
+        double uniform = (rand()/(double)(RAND_MAX));
         std::istringstream in(line);
         float x, y, z, b, g, r;
         in >> z;
-        if (z > 0) {
+        if (z > 0 && uniform <= probability) {
             x = i / dim_col;
             y = i % dim_col;
             b = image.at<Vec3b>(i, 0)[0];
@@ -214,12 +218,13 @@ void applyRotationsAndTranslations(Mat& m, const vector<Mat>& rotations, const v
 }
 
 int main(int argc, char **argv) {
-    if (argc < 3)
+    if (argc < 4)
         return 1;
     
     string pc_filepath = argv[1];
     string pc_file_out_ply = argv[2];
     int icp_num_iters = std::atoi(argv[3]);
+    double probability = std::atof(argv[4]);
     pc_filepath += "/";
     
     std::ifstream file(pc_filepath + "config.txt");
@@ -231,7 +236,7 @@ int main(int argc, char **argv) {
     in >> num_images;
     
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
-                                 pc_filepath + "depth_0.txt");
+                                 pc_filepath + "depth_0.txt", probability);
     
     Mat transformation = Mat::eye(4, 4, CV_32F);
     Mat rotation, translation;
@@ -244,7 +249,7 @@ int main(int argc, char **argv) {
         time = clock();
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
-                                     pc_filepath + "depth_" + str_num + ".txt");
+                                     pc_filepath + "depth_" + str_num + ".txt", probability);
         std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         
         extractRigidTransform(transformation, rotation, translation);
@@ -254,7 +259,7 @@ int main(int argc, char **argv) {
         for (int i = 0; i < icp_num_iters; ++i) {
             std::cout << "Construction of KD-tree" << std::endl;
             time = clock();
-            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KMeansIndexParams(32, 11, cvflann::CENTERS_RANDOM, 0.2 ));
+            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
             std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             std::cout << "Step 2: ";
             time = clock();
