@@ -13,6 +13,7 @@
 #include <sstream>
 #include <vector>
 #include <utility>
+#include <ctime>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -224,6 +225,7 @@ int main(int argc, char **argv) {
 
     Mat transformation = Mat::eye(4, 4, CV_32F);
     Mat r, t;
+    clock_t time;
 
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
@@ -241,31 +243,39 @@ int main(int argc, char **argv) {
         for (int i = 0; i < icp_num_iters; ++i) {
             std::cout << "Step 2: ";
             Mat a, b;
+            time = clock();
             nearest_neighbors(pc_a, pc_b, a, b);
-            std::cout << "complete\n";
+            time = clock() - time;
+            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
 
 
             // step 3 pass into rigid transform
             std::cout << "Step 3: ";
+            time = clock();
             rigid_transform_3D(a, b, r, t);
-            std::cout << "complete\n";
+            time = clock() - time;
+            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
 
             // step 4 apply transformation to second point cloud
             std::cout << "Step 4: ";
+            time = clock();
             pc_b = applyTransformation(pc_b, r, t);
             Mat newTransform = get_rotation_translation_matrix(r, t);
             transformation *= newTransform;
-            std::cout << "complete\n";
+            time = clock() - time;
+            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
         }
 
         // step 5 repeat 2 - 5 as many times as needed
         // step 6 combine two point clouds and output to ply file
         std::cout << "Step 5: ";
+        time = clock();
         Mat combined;
         vconcat(pc_a, pc_b, combined);
         pc_a = combined;
         save_point_cloud(pc_a, pc_file_out_ply);
-        std::cout << "complete\n";
+        time = clock() - time;
+        std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
     }
     return 0;
 }
