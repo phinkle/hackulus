@@ -100,7 +100,7 @@ void nearest_neighbors(flann::Index& kdtree, const Mat &pc_a, const Mat &pc_b, M
     Mat dists = Mat::zeros(1, 1, CV_32F);
     
     for (int i = 0; i < b.rows; ++i) {
-        kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(64));
+        kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(16));
         pc_a.row(indices.at<int>(0)).colRange(0, 3).copyTo(a.row(i));
     }
 }
@@ -252,7 +252,10 @@ int main(int argc, char **argv) {
         
         // step 2 call nearest_neighbors
         for (int i = 0; i < icp_num_iters; ++i) {
-            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
+            std::cout << "Construction of KD-tree" << std::endl;
+            time = clock();
+            flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KMeansIndexParams(32, 11, cvflann::CENTERS_RANDOM, 0.2 ));
+            std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             std::cout << "Step 2: ";
             time = clock();
             Mat a, b;
