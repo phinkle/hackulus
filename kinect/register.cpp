@@ -13,13 +13,9 @@
 #include <sstream>
 #include <vector>
 #include <utility>
-<<<<<<< HEAD
-#include <ctime>
-=======
 #include <queue>
 #include <cmath>
 #include <time.h>
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -171,40 +167,15 @@ void save_point_cloud(Mat &a, string filename) {
     plyFile.close();
 }
 
-<<<<<<< HEAD
-Mat get_rotation_translation_matrix(const Mat& rotation, const Mat& translation)
-{
-    Mat matrix = Mat::eye(4, 4, CV_32F);
-
-=======
 void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation)
 {
     rotation = Mat::zeros(3, 3, CV_32F);
     translation = Mat::zeros(3, 1, CV_32F);
     
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
     for (int i = 0; i < 3; ++i)
     {
         for (int j = 0; j < 3; ++j)
         {
-<<<<<<< HEAD
-            matrix.at<float>(i, j) = rotation.at<float>(i, j);
-        }
-    }
-
-    matrix.at<float>(0, 3) = translation.at<float>(0, 0);
-    matrix.at<float>(1, 3) = translation.at<float>(0, 1);
-    matrix.at<float>(2, 3) = translation.at<float>(0, 2);
-
-    return matrix;
-}
-
-void get_rotation_translation_from_matrix(const Mat& matrix, Mat& rotation, Mat& translation)
-{
-    rotation = Mat::zeros(3, 3, CV_32F);
-    translation = Mat::zeros(1, 3, CV_32F);
-
-=======
             rotation.at<float>(i, j) = m.at<float>(i, j);
         }
     }
@@ -218,20 +189,10 @@ Mat getRigidTransform(const Mat& rotation, const Mat& translation)
 {
     Mat m = Mat::eye(4, 4, CV_32F);
     
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
     for (int i = 0; i < 3; ++i)
     {
         for (int j = 0; j < 3; ++j)
         {
-<<<<<<< HEAD
-            rotation.at<float>(i, j) = matrix.at<float>(i, j);
-        }
-    }
-
-    translation.at<float>(0, 0) = matrix.at<float>(0, 3);
-    translation.at<float>(0, 1) = matrix.at<float>(1, 3);
-    translation.at<float>(0, 2) = matrix.at<float>(2, 3);
-=======
             m.at<float>(i, j) = rotation.at<float>(i, j);
         }
     }
@@ -250,7 +211,6 @@ void applyRotationsAndTranslations(Mat& m, const vector<Mat>& rotations, const v
     for (int i = 0; i < rotations.size(); ++i) {
         m = applyTransformation(m, rotations[i], translations[i]);
     }
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
 }
 
 int main(int argc, char **argv) {
@@ -272,19 +232,11 @@ int main(int argc, char **argv) {
     
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
                                  pc_filepath + "depth_0.txt");
-<<<<<<< HEAD
-
-    Mat transformation = Mat::eye(4, 4, CV_32F);
-    Mat r, t;
-    clock_t time;
-
-=======
     
     Mat transformation = Mat::eye(4, 4, CV_32F);
     Mat rotation, translation;
     clock_t time;
     
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
         std::cout << "REGISTERING IMAGE " << image_num << "\n";
@@ -293,19 +245,11 @@ int main(int argc, char **argv) {
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
                                      pc_filepath + "depth_" + str_num + ".txt");
-<<<<<<< HEAD
-
-        get_rotation_translation_from_matrix(transformation, r, t);
-        applyTransformation(pc_b, r, t);
-        std::cout << "complete\n";
-
-=======
         std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
         
         extractRigidTransform(transformation, rotation, translation);
         pc_b = applyTransformation(pc_b, rotation, translation);
         
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
         // step 2 call nearest_neighbors
         for (int i = 0; i < icp_num_iters; ++i) {
             std::cout << "Construction of KD-tree" << std::endl;
@@ -315,21 +259,6 @@ int main(int argc, char **argv) {
             std::cout << "Step 2: ";
             time = clock();
             Mat a, b;
-<<<<<<< HEAD
-            time = clock();
-            nearest_neighbors(pc_a, pc_b, a, b);
-            time = clock() - time;
-            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
-
-
-            // step 3 pass into rigid transform
-            std::cout << "Step 3: ";
-            time = clock();
-            rigid_transform_3D(a, b, r, t);
-            time = clock() - time;
-            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
-
-=======
             nearest_neighbors(kdtree, pc_a, pc_b, a, b);
             std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             
@@ -342,20 +271,12 @@ int main(int argc, char **argv) {
             std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
             
             
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
             // step 4 apply transformation to second point cloud
             std::cout << "Step 4: ";
             time = clock();
             pc_b = applyTransformation(pc_b, r, t);
-<<<<<<< HEAD
-            Mat newTransform = get_rotation_translation_matrix(r, t);
-            transformation *= newTransform;
-            time = clock() - time;
-            std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
-=======
             transformation *= getRigidTransform(r, t);
             std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
         }
         
         // step 5 repeat 2 - 5 as many times as needed
@@ -366,12 +287,7 @@ int main(int argc, char **argv) {
         vconcat(pc_a, pc_b, combined);
         pc_a = combined;
         save_point_cloud(pc_a, pc_file_out_ply);
-<<<<<<< HEAD
-        time = clock() - time;
-        std::cout << "Completed in " << ((float)time) / CLOCKS_PER_SEC) << " seconds" << std::endl;
-=======
         std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
->>>>>>> 783ae64cd6bae0278b46a442c7da5ab6d774faae
     }
     
     return 0;
