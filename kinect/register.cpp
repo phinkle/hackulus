@@ -170,6 +170,7 @@ int main(int argc, char **argv) {
 
     string pc_filepath = argv[1];
     string pc_file_out_ply = argv[2];
+    int icp_num_iters = std::atoi(argv[3]);
     pc_filepath += "/";
 
     std::ifstream file(pc_filepath + "config.txt");
@@ -193,7 +194,7 @@ int main(int argc, char **argv) {
         std::cout << "complete\n";
 
         // step 2 call nearest_neighbors
-        for (int i = 0; i < 15; ++i) {
+        for (int i = 0; i < icp_num_iters; ++i) {
             std::cout << "Step 2: ";
             Mat a, b;
             nearest_neighbors(pc_a, pc_b, a, b);
@@ -219,8 +220,8 @@ int main(int argc, char **argv) {
         Mat combined;
         vconcat(pc_a, pc_b, combined);
         pc_a = combined;
+        save_point_cloud(pc_a, pc_file_out_ply);
         std::cout << "complete\n";
     }
-    save_point_cloud(pc_a, pc_file_out_ply);
     return 0;
 }
