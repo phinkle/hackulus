@@ -5,6 +5,7 @@
 //  Created by Jonathan Lee on 11/30/14.
 //  Copyright (c) 2014 Jonathan Lee. All rights reserved.
 //
+// g++ register.cpp -o register `pkg-config --cflags --libs opencv` -O3
 
 #include <iostream>
 #include <fstream>
@@ -12,6 +13,10 @@
 #include <sstream>
 #include <vector>
 #include <utility>
+#include <queue>
+#include <cmath>
+#include <time.h>
+#include <cstdlib>
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/features2d/features2d.hpp>
@@ -43,14 +48,14 @@ Mat applyTransformation(const Mat &p, const Mat &r, const Mat &t) {
 
 // Takes a matrix a and b, which are both mx3 matrices
 // the cooresponding rows in each matrix represent the matching
-// pairs. 
+// pairs.
 //
 // "Returns" the 3x3 rotation matrix and the 3x1 translation vector
 // to transform a onto b
 void rigid_transform_3D(const Mat &a, const Mat &b, Mat &r, Mat &t) {
     // Total number of point pairs
     int n = a.rows;
-
+    
     // Find the centroids
     Mat centroid_a = Mat::zeros(1, 3, CV_32F);
     Mat centroid_b = Mat::zeros(1, 3, CV_32F);
@@ -60,7 +65,7 @@ void rigid_transform_3D(const Mat &a, const Mat &b, Mat &r, Mat &t) {
     }
     centroid_a /= n;
     centroid_b /= n;
-
+    
     // Center the points
     Mat aa = a.clone();
     Mat bb = b.clone();
@@ -68,44 +73,46 @@ void rigid_transform_3D(const Mat &a, const Mat &b, Mat &r, Mat &t) {
         aa.row(i) -= centroid_a;
         bb.row(i) -= centroid_b;
     }
-
+    
     Mat u, w, vt;
     SVD::compute(aa.t() * bb, w, u, vt);
-
+    
     r = vt.t() * u.t();
     if (determinant(r) < 0) {
         vt.row(2) *= -1;
         r = vt.t() * u.t();
     }
-
+    
     t = -r * centroid_a.t() + centroid_b.t();
 }
 
 // Takes a matrix pc_a and pc_b which are both nx6 matrices
-// where the number of rows represents the number of 
+// where the number of rows represents the number of
 // point clouds and the cols represent the (x, y, z, b, g, r)
 // of each point
 //
 // "Returns" matrices a and b, which are both mx3 matrices
 // the zip of the two matrices represents the (x, y, z) of the
 // points that match
-void nearest_neighbors(const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
-    Mat pc_a_view = pc_a.colRange(0, 3).clone();
-    flann::Index kdtree(pc_a_view, flann::KDTreeIndexParams(4));
+void nearest_neighbors(flann::Index& kdtree, const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
     a = Mat::zeros(pc_b.rows, 3, CV_32F);
     b = pc_b.colRange(0, 3).clone();
     Mat indices = Mat::zeros(1, 1, CV_32F);
     Mat dists = Mat::zeros(1, 1, CV_32F);
+    
     for (int i = 0; i < b.rows; ++i) {
-        kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(64));
-        pc_a.row(indices.at<int>(0)).colRange(0, 3).copyTo(a.row(i));
+//        std::cout << b.row(i) << std::endl;
+        kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(16));
+        
+        int index = indices.at<int>(0);
+        pc_a.row(index).colRange(0, 3).copyTo(a.row(i));
     }
 }
 
 Mat load_kinect_frame(const string image_filename, const string depth_filename) {
     Mat image, pc;
     int dim_row, dim_col;
-
+    
     image = imread(image_filename);
     if (!image.data) {
         std::cout << "Could not read '" << image_filename << "'\n";
@@ -114,11 +121,13 @@ Mat load_kinect_frame(const string image_filename, const string depth_filename) 
     dim_row = image.rows;
     dim_col = image.cols;
     image = image.reshape(3, image.rows * image.cols);
-
+    
     std::ifstream file(depth_filename);
     pc = Mat::zeros(1, 6, CV_32F);
     pc.pop_back(1);
     string line;
+    
+    
     for (int i = 0; getline(file, line); ++i) {
         std::istringstream in(line);
         float x, y, z, b, g, r;
@@ -160,67 +169,152 @@ void save_point_cloud(Mat &a, string filename) {
         }
         plyFile << (int) round(a.at<float>(i, 5)) << "\n";
     }
-
+    
     plyFile.close();
 }
 
-int main(int argc, char **argv) {
-    if (argc < 3)
-        return 1;
+void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation)
+{
+    rotation = Mat::zeros(3, 3, CV_32F);
+    translation = Mat::zeros(3, 1, CV_32F);
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            rotation.at<float>(i, j) = m.at<float>(i, j);
+        }
+    }
+    
+    translation.at<float>(0, 0) = m.at<float>(0, 3);
+    translation.at<float>(0, 1) = m.at<float>(1, 3);
+    translation.at<float>(0, 2) = m.at<float>(2, 3);
+}
 
+Mat getRigidTransform(const Mat& rotation, const Mat& translation)
+{
+    Mat m = Mat::eye(4, 4, CV_32F);
+    
+    for (int i = 0; i < 3; ++i)
+    {
+        for (int j = 0; j < 3; ++j)
+        {
+            m.at<float>(i, j) = rotation.at<float>(i, j);
+        }
+    }
+    
+    m.at<float>(0, 3) = translation.at<float>(0, 0);
+    m.at<float>(1, 3) = translation.at<float>(0, 1);
+    m.at<float>(2, 3) = translation.at<float>(0, 2);
+    
+    return m;
+}
+
+void applyRotationsAndTranslations(Mat& m, const vector<Mat>& rotations, const vector<Mat>& translations)
+{
+    assert(rotations.size() == translations.size());
+    
+    for (int i = 0; i < rotations.size(); ++i) {
+        m = applyTransformation(m, rotations[i], translations[i]);
+    }
+}
+
+Mat selectRandomPoints(const Mat& pts, double probability)
+{
+    std::vector<Mat> points;
+    
+    for (int i = 0; i < pts.rows; ++i)
+    {
+        double uniform = (rand() / ((double) RAND_MAX));
+        
+        if (uniform <= probability)
+        {
+            points.push_back(pts.row(i).clone());
+        }
+    }
+    
+    Mat sample = Mat::zeros((int) points.size(), pts.cols, CV_32F);
+    for (int i = 0; i < points.size(); ++i)
+    {
+        points[i].copyTo(sample.row(i));
+    }
+    
+    return sample;
+}
+
+int main(int argc, char **argv) {
+    if (argc < 4)
+        return 1;
+    
     string pc_filepath = argv[1];
     string pc_file_out_ply = argv[2];
+    int icp_num_iters = std::atoi(argv[3]);
+    double probability = std::atof(argv[4]);
     pc_filepath += "/";
-
+    
     std::ifstream file(pc_filepath + "config.txt");
     string line;
     getline(file, line);
     std::istringstream in(line);
-
+    
     int num_images;
     in >> num_images;
-
+    
     Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
                                  pc_filepath + "depth_0.txt");
-
+    
+    Mat allSamples = selectRandomPoints(pc_a, probability);
+    
+    Mat transformation = Mat::eye(4, 4, CV_32F);
+    Mat rotation, translation;
+    clock_t time;
+    
     for (int image_num = 1; image_num < num_images; ++image_num) {
         // step 1 read in two point clouds
-        std::cout << "REGISTERING IMAGE " << image_num << "\n";
-        std::cout << "Step 1: ";
+        std::cout << "REGISTERING IMAGE " << image_num << std::endl;
+//        std::cout << "Step 1: ";
+        time = clock();
         string str_num = std::to_string(image_num);
         Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
                                      pc_filepath + "depth_" + str_num + ".txt");
-        std::cout << "complete\n";
-
+        
+        Mat pc_b_sample = selectRandomPoints(pc_b, probability);
+        
+//        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
+        
+        extractRigidTransform(transformation, rotation, translation);
+        pc_b_sample = applyTransformation(pc_b_sample, rotation, translation);
+        pc_b = applyTransformation(pc_b, rotation, translation);
+        
         // step 2 call nearest_neighbors
-        for (int i = 0; i < 15; ++i) {
-            std::cout << "Step 2: ";
+        for (int i = 0; i < icp_num_iters; ++i) {
+            flann::Index kdtree(allSamples.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
+
             Mat a, b;
-            nearest_neighbors(pc_a, pc_b, a, b);
-            std::cout << "complete\n";
-
-
+            nearest_neighbors(kdtree, allSamples, pc_b_sample, a, b);
+            
             // step 3 pass into rigid transform
-            std::cout << "Step 3: ";
             Mat r, t;
-            rigid_transform_3D(a, b, r, t);
-            std::cout << "complete\n";
-
-
+            rigid_transform_3D(b, a, r, t);
+            
             // step 4 apply transformation to second point cloud
-            std::cout << "Step 4: ";
-            pc_a = applyTransformation(pc_a, r, t);
-            std::cout << "complete\n";
+            pc_b_sample = applyTransformation(pc_b_sample, r, t);
+            pc_b = applyTransformation(pc_b, r, t);
+            transformation *= getRigidTransform(r, t);
         }
-
+        
         // step 5 repeat 2 - 5 as many times as needed
+        
         // step 6 combine two point clouds and output to ply file
-        std::cout << "Step 5: ";
-        Mat combined;
+        Mat combined, combinedSample;
         vconcat(pc_a, pc_b, combined);
+        vconcat(allSamples, pc_b_sample, combinedSample);
         pc_a = combined;
-        std::cout << "complete\n";
+        allSamples = combinedSample;
+//        save_point_cloud(pc_a, pc_file_out_ply);
+        save_point_cloud(allSamples, pc_file_out_ply);
+        std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
     }
-    save_point_cloud(pc_a, pc_file_out_ply);
+    
     return 0;
 }

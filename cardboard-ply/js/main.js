@@ -21,7 +21,7 @@ function init() {
   scene = new THREE.Scene();
 
   camera = new THREE.PerspectiveCamera(90, 1, 0.001, 700);
-  camera.position.set(5, 30, 0);
+  camera.position.set(80, 80, 200);
   scene.add(camera);
 
   controls = new THREE.OrbitControls(camera, element);
@@ -79,7 +79,7 @@ function init() {
   scene.add(m);
 
   var mesh;
-  displayPoints("ply/pikachu.ply");
+  displayPoints("ply/batman.ply");
 
   // loading ply file
 //   var loader = new THREE.PLYLoader();
@@ -122,22 +122,19 @@ function displayPoints(file) {
 function parsePoints(data) {
   var lines = data.split("\n");
   var geometry = new THREE.Geometry();
-  var numPoints = lines[0];
 
   var colors = [];
-  var index = 0;
 
-  for (var i = 1; i < lines.length - 1; i++) {
+  for (var i = 0; i < lines.length - 1; i++) {
     //console.log(lines[i]);
     var points = lines[i].split(" ");
 
-    var vector = new THREE.Vector3(points[1] - 200, (points[0] * -1) + 300, points[2]);
+    var vector = new THREE.Vector3(points[1] - 200, (points[0] * -1) + 350, points[2]);
     geometry.vertices.push(vector);
     var c = new THREE.Color("rgb(" + points[5] + "," + points[4] + "," + points[3] + ")" );
-    colors[index] = c;
-
-    index++;
+    colors[i] = c;
   }
+
   geometry.colors = colors;
   geometry.computeBoundingBox();
 
