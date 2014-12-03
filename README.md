@@ -1,11 +1,5 @@
-Hackulus Thriftus
-=================
-
-Kinect
-======
-
-Displaying with Google Cardboard
-================================
+Hackulus Thriftus Google Cardboard Display
+==========================================
 
 Google Cardboard example taken from [Google Chrome Experiments page](http://vr.chromeexperiments.com/example.html).
 
