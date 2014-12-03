@@ -1,24 +1,14 @@
-Cardboard Example
-=================
+Hackulus Thriftus Google Cardboard Display
+==========================================
 
-Google Cardboard example, using device orientation API.
+Google Cardboard example taken from [Google Chrome Experiments page](http://vr.chromeexperiments.com/example.html).
 
-Taken from [here](http://vr.chromeexperiments.com/example.html)
+Mirrored code located at www.cs.utexas.edu/~phinkle/temp-cardboard/cardboard-ply
+This can be run on a mobile device in order to be used with Google Cardboard.
 
-Rotating an Object:
-http://stackoverflow.com/questions/26081699/threejs-rotating-object-with-device-orientation-control
+Note: .ply files handled by this program do not use the header. Files include only points and colors.
 
-First Person Controls:
-this.controls.disconnect();
-
-if (has.mobile) {
-  this.controls = new THREE.DeviceOrientationControls(this.cameras.firstPerson);
-} else {
-  this.controls = new THREE.FirstPersonControls(this.cameras.firstPerson);
-}
-
-this.controls.connect();
-
-this.controls.movementSpeed = 10;
-this.controls.rollSpeed = Math.PI / 4;
-this.controls.autoForward = true;
+Further improvements: 
+- Allow user to change which ply file to view via web interface
+- Allow user to move the figure around (currently this is an issue because of limited inputs available to cardboard).
+- Calculate the center and size of the point cloud and adjust its placement in relation to the camera dynamically.
