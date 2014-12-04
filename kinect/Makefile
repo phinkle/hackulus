@@ -20,4 +20,4 @@ icp.o: icp.cpp
 	$(CC) $(CFLAGS) $(OPENCV) icp.cpp
 
 clean:
-	rm -rf *.o register register-test
+	rm -rf *.o register register-tests
