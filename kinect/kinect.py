@@ -14,23 +14,22 @@ depth_range = 750
 
 while True:
     if not capture.grab():
-        print "Unable to Grab Frames from camera"
+        print "Unable to read from Kinect"
         break
     okay1, depth_map = capture.retrieve(0, cv2.cv.CV_CAP_OPENNI_DEPTH_MAP)
     if not okay1:
-        print "Unable to Retrieve Disparity Map from camera"
+        print "Unable to retrieve depth map from Kinect"
         break
 
     okay2, bgr_image = capture.retrieve(0, cv2.cv.CV_CAP_OPENNI_BGR_IMAGE)
     if not okay2:
-        print "Unable to retrieve Gray Image from device"
+        print "Unable to retrieve BGR image from Kinect"
         break
 
-    cv2.imshow("rgb camera", bgr_image)
     unknown = depth_map.min()
     bgr_image[depth_map <= unknown] = np.zeros(3)
     bgr_image[depth_map >= depth_range] = np.zeros(3)
-    cv2.imshow("rgb camera - filtered", bgr_image)
+    cv2.imshow("bgr camera - filtered", bgr_image)
     key_pressed = cv2.waitKey(10)
     if key_pressed == 27:
         if num_frame != -1:
