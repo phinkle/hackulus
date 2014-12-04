@@ -18,19 +18,12 @@
 #include <time.h>
 #include <cstdlib>
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/features2d/features2d.hpp>
-#include <opencv2/nonfree/features2d.hpp>
-#include <opencv2/nonfree/nonfree.hpp>
-#include <opencv/highgui.h>
-
-using namespace cv;
+#include "register.hpp"
 
 /**
  * Applies a rotation and transformation matrix to a point cloud.
  *
- * p should be a nx6 which represents the point cloud each row is
- * a single point: (x, y, z, b, g, r)
+ * p should be a nx6 which represents the point cloud each row is a single point: (x, y, z, b, g, r)
  */
 Mat applyTransformation(const Mat &p, const Mat &r, const Mat &t) {
   Mat c = p.colRange(0, 3);
@@ -197,15 +190,12 @@ void save_point_cloud(Mat &a, string filename) {
  * Used for extracting the transformation matrices from the accumulated rigid
  * transform.
  */
-void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation)
-{
+void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation) {
   rotation = Mat::zeros(3, 3, CV_32F);
   translation = Mat::zeros(3, 1, CV_32F);
 
-  for (int i = 0; i < 3; ++i)
-  {
-    for (int j = 0; j < 3; ++j)
-    {
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
       rotation.at<float>(i, j) = m.at<float>(i, j);
     }
   }
@@ -222,14 +212,11 @@ void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation)
  * Used for creating a single matrix that can be used to accumulating the
  * transformation matrices.
  */
-Mat getRigidTransform(const Mat& rotation, const Mat& translation)
-{
+Mat getRigidTransform(const Mat& rotation, const Mat& translation) {
   Mat m = Mat::eye(4, 4, CV_32F);
 
-  for (int i = 0; i < 3; ++i)
-  {
-    for (int j = 0; j < 3; ++j)
-    {
+  for (int i = 0; i < 3; ++i) {
+    for (int j = 0; j < 3; ++j) {
       m.at<float>(i, j) = rotation.at<float>(i, j);
     }
   }
@@ -247,16 +234,13 @@ Mat getRigidTransform(const Mat& rotation, const Mat& translation)
  * A random number is generated for each point and if the number
  * is lower than PROBABILITY, the point is included in the subsample.
  */
-Mat selectRandomPoints(const Mat& pts, double probability)
-{
+Mat selectRandomPoints(const Mat& pts, double probability) {
   std::vector<Mat> points;
 
-  for (int i = 0; i < pts.rows; ++i)
-  {
+  for (int i = 0; i < pts.rows; ++i) {
     double uniform = (rand() / ((double) RAND_MAX));
 
-    if (uniform <= probability)
-    {
+    if (uniform <= probability) {
       points.push_back(pts.row(i).clone());
     }
   }
