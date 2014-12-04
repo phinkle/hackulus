@@ -1,10 +1,11 @@
 //
-//  icp.cpp
+//  register.cpp
 //  Use ICP to register a set of 3D point clouds.
 //
 //  Created by Jonathan Lee on 11/30/14.
 //  Copyright (c) 2014 Jonathan Lee. All rights reserved.
 //
+// g++ register.cpp -o register `pkg-config --cflags --libs opencv` -O3
 
 #include <iostream>
 #include <fstream>
@@ -17,12 +18,19 @@
 #include <time.h>
 #include <cstdlib>
 
-#include "icp.hpp"
+#include <opencv2/opencv.hpp>
+#include <opencv2/features2d/features2d.hpp>
+#include <opencv2/nonfree/features2d.hpp>
+#include <opencv2/nonfree/nonfree.hpp>
+#include <opencv/highgui.h>
+
+using namespace cv;
 
 /**
  * Applies a rotation and transformation matrix to a point cloud.
  *
- * p should be a nx6 which represents the point cloud each row is a single point: (x, y, z, b, g, r)
+ * p should be a nx6 which represents the point cloud each row is
+ * a single point: (x, y, z, b, g, r)
  */
 Mat applyTransformation(const Mat &p, const Mat &r, const Mat &t) {
   Mat c = p.colRange(0, 3);
@@ -95,7 +103,7 @@ void rigid_transform_3D(const Mat &a, const Mat &b, Mat &r, Mat &t) {
  * points that match
  */
 void nearest_neighbors(const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
-  flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(1));
+  flann::Index kdtree(pc_a.colRange(0, 3).clone(), flann::KDTreeIndexParams(4));
   a = Mat::zeros(pc_b.rows, 3, CV_32F);
   b = pc_b.colRange(0, 3).clone();
   Mat indices = Mat::zeros(1, 1, CV_32F);
@@ -103,7 +111,7 @@ void nearest_neighbors(const Mat &pc_a, const Mat &pc_b, Mat &a, Mat &b) {
 
   for (int i = 0; i < b.rows; ++i) {
     //        std::cout << b.row(i) << std::endl;
-    kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(16));
+    kdtree.knnSearch(b.row(i), indices, dists, 1, flann::SearchParams(64));
 
     int index = indices.at<int>(0);
     pc_a.row(index).colRange(0, 3).copyTo(a.row(i));
@@ -189,12 +197,15 @@ void save_point_cloud(Mat &a, string filename) {
  * Used for extracting the transformation matrices from the accumulated rigid
  * transform.
  */
-void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation) {
+void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation)
+{
   rotation = Mat::zeros(3, 3, CV_32F);
   translation = Mat::zeros(3, 1, CV_32F);
 
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
+  for (int i = 0; i < 3; ++i)
+  {
+    for (int j = 0; j < 3; ++j)
+    {
       rotation.at<float>(i, j) = m.at<float>(i, j);
     }
   }
@@ -211,11 +222,14 @@ void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation) {
  * Used for creating a single matrix that can be used to accumulating the
  * transformation matrices.
  */
-Mat getRigidTransform(const Mat& rotation, const Mat& translation) {
+Mat getRigidTransform(const Mat& rotation, const Mat& translation)
+{
   Mat m = Mat::eye(4, 4, CV_32F);
 
-  for (int i = 0; i < 3; ++i) {
-    for (int j = 0; j < 3; ++j) {
+  for (int i = 0; i < 3; ++i)
+  {
+    for (int j = 0; j < 3; ++j)
+    {
       m.at<float>(i, j) = rotation.at<float>(i, j);
     }
   }
@@ -233,21 +247,106 @@ Mat getRigidTransform(const Mat& rotation, const Mat& translation) {
  * A random number is generated for each point and if the number
  * is lower than PROBABILITY, the point is included in the subsample.
  */
-Mat selectRandomPoints(const Mat& pts, double probability) {
+Mat selectRandomPoints(const Mat& pts, double probability)
+{
   std::vector<Mat> points;
 
-  for (int i = 0; i < pts.rows; ++i) {
+  for (int i = 0; i < pts.rows; ++i)
+  {
     double uniform = (rand() / ((double) RAND_MAX));
 
-    if (uniform <= probability) {
+    if (uniform <= probability)
+    {
       points.push_back(pts.row(i).clone());
     }
   }
 
   Mat sample = Mat::zeros((int) points.size(), pts.cols, CV_32F);
-  for (int i = 0; i < points.size(); ++i) {
+  for (size_t i = 0; i < points.size(); ++i) {
     points[i].copyTo(sample.row(i));
   }
 
   return sample;
+}
+
+int main(int argc, char **argv) {
+  if (argc < 5) {
+    std::cout << "Usage: "
+              << argv[0]
+              << " path_to_scans/ output.ply icp_iters subsample_probability" << std::endl;
+    return 1;
+  }
+
+  // Command line parameters
+  string pc_filepath = argv[1];
+  string pc_file_out_ply = argv[2];
+  int icp_num_iters = std::atoi(argv[3]);
+  double probability = std::atof(argv[4]);
+  if (pc_filepath.c_str()[pc_filepath.length() - 1] != '/') {
+    pc_filepath += "/";
+  }
+
+  std::ifstream file(pc_filepath + "config.txt");
+  string line;
+  getline(file, line);
+  std::istringstream in(line);
+
+  int num_images;
+  in >> num_images;
+
+  Mat pc_a = load_kinect_frame(pc_filepath + "image_0.png",
+      pc_filepath + "depth_0.txt");
+
+  Mat allSamples = selectRandomPoints(pc_a, probability);
+
+  // Used for accumulating the rigid transformation matrix
+  Mat transformation = Mat::eye(4, 4, CV_32F);
+
+  Mat rotation, translation;
+  clock_t time;
+
+  for (int image_num = 1; image_num < num_images; ++image_num) {
+    std::cout << "REGISTERING IMAGE " << image_num << std::endl;
+    time = clock();
+
+    // Load the point cloud to be registered
+    string str_num = std::to_string(image_num);
+    Mat pc_b = load_kinect_frame(pc_filepath + "image_" + str_num + ".png",
+        pc_filepath + "depth_" + str_num + ".txt");
+    Mat pc_b_sample = selectRandomPoints(pc_b, probability);
+
+    // Apply the previous transformations to b so that it is positioned near
+    // the last accumulated points
+    extractRigidTransform(transformation, rotation, translation);
+    pc_b_sample = applyTransformation(pc_b_sample, rotation, translation);
+    pc_b = applyTransformation(pc_b, rotation, translation);
+
+    // Perform the specified number of icp iterations
+    for (int i = 0; i < icp_num_iters; ++i) {
+      // Find the nearest neighbor pairs in the two point clouds
+      Mat a, b;
+      nearest_neighbors(allSamples, pc_b_sample, a, b);
+
+      // Find the optimal rotation and translation matrix to transform b onto a
+      Mat r, t;
+      rigid_transform_3D(b, a, r, t);
+
+      // Apply the rigid transformation to the b point cloud
+      pc_b_sample = applyTransformation(pc_b_sample, r, t);
+      pc_b = applyTransformation(pc_b, r, t);
+      transformation *= getRigidTransform(r, t);
+    }
+
+    // Combine the two point clouds and save to disk
+    Mat combined, combinedSample;
+    vconcat(pc_a, pc_b, combined);
+    vconcat(allSamples, pc_b_sample, combinedSample);
+    pc_a = combined;
+    allSamples = combinedSample;
+    save_point_cloud(combined, pc_file_out_ply);
+
+    std::cout << "complete " << ((float)(clock() - time)) / CLOCKS_PER_SEC << std::endl;
+  }
+
+  return 0;
 }
