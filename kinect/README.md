@@ -1,11 +1,23 @@
+Files:
+
+- kinect.py: captures images from Kinect
+- main.cpp: main registration code
+- main-tests.cpp: tests for icp.cpp
+- icp.cpp/hpp: our library for performing ICP
+- Makefile
+
 Compilation:
-g++ register.cpp -o register `pkg-config --cflags --libs opencv` -O3
+make
 
 Run:
-./register icp_iterations sampling_probability
-
-icp_iterations: an positive integer
-sampling_probability: double from [0, 1]
+./kinect.py output_directory
+- output_directory: directory to output the color and depth information
+./register input_directory output.ply icp_iterations sampling_probability
+- input_directory: directory to read color and depth information from
+- output.ply: where to output the registered point cloud
+- icp_iterations: an positive integer
+- sampling_probability: double from [0, 1]
+./register-tests
 
 Structure:
 
@@ -24,4 +36,7 @@ Structure:
 	Register transformed point cloud
 	Write point cloud to disk
 
-[JON WRITE THE KINECT PY]
+To use the kinect.py script, first execute the script. Press ESC to
+start recording. Press ESC again to stop. W and S change the scope
+of the depth that is recorded. You can see the result live in the
+"bgr camera - filtered" window.
