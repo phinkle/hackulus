@@ -46,11 +46,7 @@ while True:
         depth_range -= 50
         print "Range decreased to", depth_range
 
-    if num_frame >= 0:
-        num_frame += 1
-
-    if num_frame % 3 == 0:
-        num_frame = 0
+    if num_frame != -1:
         depth_map[depth_map >= depth_range] = unknown
         depth_map[depth_map > unknown] = depth_range - depth_map[depth_map > unknown] + 1
         depth_map = depth_map.reshape(-1, 1)
