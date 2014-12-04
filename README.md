@@ -4,6 +4,8 @@ Hackulus Thriftus
 Kinect
 ======
 
+View the Kinect README.md in kinect folder.
+
 Displaying with Google Cardboard
 ================================
 
