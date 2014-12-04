@@ -110,3 +110,12 @@ void testExtractRigidTransform()
 		}
 	}
 }
+
+void test()
+{
+	testApplyTransformation();
+	testNearestNeighbors();
+	testRigidTransform3d();
+	testGetRigidTransform();
+	testExtractRigidTransform();
+}
