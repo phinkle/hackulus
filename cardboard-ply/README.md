@@ -1,24 +1,36 @@
-Cardboard Example
+Hackulus Thriftus
 =================
 
-Google Cardboard example, using device orientation API.
+Kinect
+======
 
-Taken from [here](http://vr.chromeexperiments.com/example.html)
+Displaying with Google Cardboard
+================================
 
-Rotating an Object:
-http://stackoverflow.com/questions/26081699/threejs-rotating-object-with-device-orientation-control
+Google Cardboard example taken from [Google Chrome Experiments page](http://vr.chromeexperiments.com/example.html).
 
-First Person Controls:
-this.controls.disconnect();
+Mirrored code located at www.cs.utexas.edu/~phinkle/temp-cardboard/cardboard-ply
+This can be run on a mobile device in order to be used with Google Cardboard.
 
-if (has.mobile) {
-  this.controls = new THREE.DeviceOrientationControls(this.cameras.firstPerson);
-} else {
-  this.controls = new THREE.FirstPersonControls(this.cameras.firstPerson);
-}
+cardboard-ply/ply/
+Contains all the ply files to display.
+Note: .ply files handled by this program do not use the header. Files include only points and colors.
 
-this.controls.connect();
+cardboard-ply/textures/
+Contains images of used for texturing the ground plane.
 
-this.controls.movementSpeed = 10;
-this.controls.rollSpeed = Math.PI / 4;
-this.controls.autoForward = true;
+cardboard-ply/third-party/threejs
+Contains all the three.js libraries used in main.js.
+
+cardboard-ply/index.html
+Sets up the canvas to be used to display the WebGL loader.
+Also imports all the libraries needed in main.js.
+
+cardboard-ply/main.js
+Creates a threejs scene using the WebGL loader and offsetting two screens to create a stereo vision view for Google Cardboard.
+The ply file is loaded and used to create a point cloud which is then displayed in the threejs scene.
+
+Further improvements: 
+- Allow user to change which ply file to view via web interface
+- Allow user to move the figure around (currently this is an issue because of limited inputs available to cardboard).
+- Calculate the center and size of the point cloud and adjust its placement in relation to the camera dynamically.
