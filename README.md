@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-projects-rsr898
-===============
-
-rsr898's private project repo
-=======
 Hackulus Thriftus
 =================
 
@@ -83,4 +77,3 @@ The ply file is loaded and used to create a point cloud which is then displayed 
 - Allow user to change which ply file to view via web interface
 - Allow user to move the figure around (currently this is an issue because of limited inputs available to cardboard).
 - Calculate the center and size of the point cloud and adjust its placement in relation to the camera dynamically.
->>>>>>> 71047728497d9212f6b30ec3bf09270279b0e94d
