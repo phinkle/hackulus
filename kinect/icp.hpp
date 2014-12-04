@@ -13,3 +13,4 @@ Mat load_kinect_frame(const string image_filename, const string depth_filename);
 void save_point_cloud(Mat &a, string filename);
 void extractRigidTransform(const Mat& m, Mat& rotation, Mat& translation);
 Mat getRigidTransform(const Mat& rotation, const Mat& translation);
+Mat selectRandomPoints(const Mat& pts, double probability);
